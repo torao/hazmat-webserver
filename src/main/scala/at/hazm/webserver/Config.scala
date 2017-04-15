@@ -1,7 +1,7 @@
 package at.hazm.webserver
 
 import java.io.File
-import java.net.{InetSocketAddress, SocketAddress, URI, URL}
+import java.net.{InetSocketAddress, URI, URL}
 import java.nio.charset.StandardCharsets
 
 import com.twitter.util.StorageUnit
@@ -77,6 +77,16 @@ class Config(val source:URL, val config:com.typesafe.config.Config) {
     private[this] def get[T](key:String, default:T)(implicit converter:(String) => Either[String, T]):T = _get[T](s"template.$key", default)(converter)
 
     val updateCheckInterval:Long = get("update-check-interval", 2) * 1000L
+  }
+
+  object script {
+    private[this] def get[T](key:String, default:T)(implicit converter:(String) => Either[String, T]):T = _get[T](s"script.$key", default)(converter)
+    private[this] def getArray[T](key:String, default:String)(implicit converter:(String) => Either[String, T]):Seq[T] = {
+      get(key, default).split(",").filter(_.nonEmpty).map(converter).collect{ case Right(value) => value }
+    }
+
+    val timeout:Long = get("timeout", 10 * 1000L)
+    val extensions:Seq[String] = getArray("extensions", ".xjs")
   }
 
 }

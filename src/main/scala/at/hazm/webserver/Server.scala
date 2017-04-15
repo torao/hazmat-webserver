@@ -1,18 +1,14 @@
 package at.hazm.webserver
 
-import java.io.File
-import java.nio.charset.StandardCharsets
-import java.security.MessageDigest
-import java.util.Properties
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicReference}
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.{Properties, Timer, TimerTask}
 
-import at.hazm.util.Cache
 import at.hazm.using
 import com.twitter.finagle.{Http, ListeningServer}
 import com.twitter.util.{Await, Duration}
 import org.slf4j.LoggerFactory
 
-import scala.annotation.tailrec
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.Try
 
 
@@ -69,7 +65,7 @@ object Server {
     val context = new Context(if (args.nonEmpty) args.head else ".", 2 * 1000L)
     val server = new Server()
 
-    while(true){
+    while (true) {
       context.config.server.get
       context.config.server.onUpdate { (_, config) =>
         server.shutdown()
@@ -106,11 +102,11 @@ object Server {
         "???"
       }
     }
-    s"HazMat Server/1.0 (Finagle/$finagleVersion)"
+    s"HazMat Server/1.0 Finagle/$finagleVersion"
   }
 
   private[this] def initLogging():Unit = {
-    import com.twitter.logging.{Formatter, Handler, LoggerFactory => TWLoggerFactory, Level}
+    import com.twitter.logging.{Formatter, Handler, Level, LoggerFactory => TWLoggerFactory}
     class Log4jHandler(formatter:Formatter = new Formatter(), level:Option[Level] = None) extends Handler(formatter, level) {
 
       import java.util.{logging => jlog}
@@ -137,6 +133,92 @@ object Server {
       handlers = { () => new Log4jHandler() } :: Nil
     )
     com.twitter.logging.Logger.configure(factory :: Nil)
+  }
+
+  object scheduler {
+    /** サーバ内で使用するタイマー。 */
+    private[this] val timer = new Timer("HazMat Timer", true)
+
+    trait Cancelable {
+      def cancel():Unit
+    }
+
+    /**
+      * このスケジューラにおいて処理がタイムアウトした時に発生する例外。
+      *
+      * @param msg 例外メッセージ
+      */
+    case class TimeoutException(msg:String) extends Exception(msg)
+
+    /**
+      * 指定された時刻後に処理を実行する。
+      *
+      * @param delay 遅延時間 (ミリ秒)
+      * @param f     実行する処理
+      * @tparam T 処理結果の型
+      * @return (処理結果, 処理キャンセル用のコールバック)
+      */
+    def at[T](delay:Long)(f: => T):(Future[T], Cancelable) = {
+      val promise = Promise[T]()
+      val task = new TimerTask() {
+        override def run():Unit = {
+          val result = Try(f)
+          promise.synchronized {
+            if (!promise.isCompleted) promise.complete(result)
+          }
+        }
+      }
+      timer.schedule(task, delay)
+      (promise.future, new Cancelable() {
+        override def cancel():Unit = {
+          task.cancel()
+          promise.synchronized {
+            if (!promise.isCompleted) promise.failure(TimeoutException("task canceled"))
+          }
+        }
+      })
+    }
+
+    private[this] def defaultOnTimeout(t:Thread):Future[_] = Future.failed(TimeoutException("execution timed-out"))
+
+    /**
+      * タイムアウト処理付きの非同期実行。
+      * 指定された処理を非同期で起動するとともに、タイムアウト時間になったら割り込みを行いコールバックする。
+      *
+      * @param interval  処理タイムアウトまでの時間 (ミリ秒)
+      * @param onTimeout 処理がタイムアウトした時のコールバック。返値で Future の結果を置き換える。
+      * @param f         非同期で実行する処理
+      * @param _context  スレッドプール
+      * @tparam T 非同期処理の結果の型
+      * @return 処理結果
+      */
+    def runWithTimeout[T](interval:Long, onTimeout:(Thread) => Future[T] = defaultOnTimeout _)(f: => T)(implicit _context:ExecutionContext):Future[T] = {
+      val promise = Promise[T]()
+      Future {
+        val current = Thread.currentThread()
+        val (_, call) = at(interval) {
+          promise.synchronized {
+            current.interrupt()
+            promise.completeWith(onTimeout(current))
+          }
+        }
+        try {
+          val result = f
+          promise.synchronized {
+            if (!promise.isCompleted) promise.success(result)
+          }
+        } catch {
+          case ex:Throwable if !ex.isInstanceOf[ThreadDeath] =>
+            logger.warn("unhandled exception", ex)
+            promise.synchronized {
+              if (!promise.isCompleted) promise.failure(ex)
+            }
+        } finally {
+          call.cancel()
+        }
+      }
+      promise.future
+    }
   }
 
 }

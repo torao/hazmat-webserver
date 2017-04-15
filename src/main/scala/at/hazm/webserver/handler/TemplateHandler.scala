@@ -5,7 +5,7 @@ import java.nio.file.Path
 import java.util.Date
 
 import at.hazm.on
-import at.hazm.webserver.{RequestHandler, TemplateEngine}
+import at.hazm.webserver.TemplateEngine
 import com.twitter.finagle.http.{Request, Response, Status, Version}
 import com.twitter.io.Reader
 import org.slf4j.LoggerFactory

@@ -5,7 +5,7 @@ import java.nio.file.Path
 import java.util.Date
 
 import at.hazm.on
-import at.hazm.webserver.{RequestHandler, _}
+import at.hazm.webserver.{_}
 import com.twitter.finagle.http.{Request, Response, Status, Version}
 import org.slf4j.LoggerFactory
 
@@ -86,7 +86,8 @@ object FileHandler {
     * @return ローカルファイル
     */
   def mapLocalFile(docroot:Path, uri:String):Option[File] = {
-    val requestPath = docroot.resolve(uri.dropWhile(_ == '/')).toAbsolutePath
+    val path = uri.takeWhile{ ch => ch != '?' && ch != '#' }
+    val requestPath = docroot.resolve(path.dropWhile(_ == '/')).toAbsolutePath
     if (!requestPath.toString.startsWith(docroot.toString)) {
       logger.debug(s"invalid uri: $requestPath isn't start with $docroot")
       None

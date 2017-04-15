@@ -1,4 +1,4 @@
-package at.hazm.webserver
+package at.hazm.webserver.handler
 
 import java.io._
 import java.nio.charset.StandardCharsets
@@ -12,6 +12,7 @@ import at.hazm.util.XML._
 import com.twitter.finagle.http.{Request, Response, Status, Version}
 import com.twitter.io.Reader
 
+import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.Elem
 
 abstract class RequestHandler(docroot:Path) {
@@ -46,6 +47,8 @@ abstract class RequestHandler(docroot:Path) {
     response.contentType = "text/html"
     response
   }
+
+  def applyAsync(request:Request)(implicit context:ExecutionContext):Future[Option[Response]] = Future(apply(request))
 }
 
 object RequestHandler {
@@ -65,5 +68,4 @@ object RequestHandler {
         code -> error
     }
   }.toMap
-
 }
