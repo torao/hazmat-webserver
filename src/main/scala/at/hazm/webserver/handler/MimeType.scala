@@ -1,10 +1,9 @@
 package at.hazm.webserver.handler
 
-import java.io.{ByteArrayInputStream, File, FileInputStream, InputStream}
+import java.io.{ByteArrayInputStream, InputStream}
 import java.net.URI
 import java.util.Properties
 
-import at.hazm.using
 import at.hazm.util.Cache
 import com.twitter.finagle.http.MediaType
 
@@ -23,7 +22,7 @@ case class MimeType private(map:Map[String, String], parent:MimeType*) {
 
 object MimeType {
 
-  def defaultMimeType = load(getClass.getResourceAsStream("/at/hazm/mimetype.properties"))
+  val defaultMimeType:MimeType = load(getClass.getResourceAsStream("/at/hazm/mimetype.properties"))
 
   def load(in:InputStream, parent:MimeType*):MimeType = {
     val prop = new Properties()

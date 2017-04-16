@@ -44,21 +44,18 @@ class FileHandler(docroot:Path, sendBufferSize:Int, mime:Cache[MimeType]) extend
       Left(getErrorResponse(Status.Forbidden))
     }
   } else if (realPath.isDirectory) {
+    // ディレクトリが指定された場合はデフォルトHTMLにリダイレクト
+    // ※index.html が動的生成の場合はファイルとして存在しないため Forbidden にする場合は他のハンドラが存在するかを判断しなければならない
     val indexFile = "index.html"
-    if (new File(realPath, indexFile).isFile) {
-      request.originalURL match {
-        case Some(location) =>
-          Left(on(getErrorResponse(Status.Found)) { res =>
-            res.location = s"$location${if (location.endsWith("/")) "" else "/"}$indexFile"
-            logger.debug(s"directory redirect to: ${res.location.getOrElse("???")}")
-          })
-        case None =>
-          logger.debug(s"original request is not available: $request")
-          Left(getErrorResponse(Status.Forbidden))
-      }
-    } else {
-      logger.debug(s"directory index not allowed: $realPath")
-      Left(getErrorResponse(Status.Forbidden))
+    request.originalURL match {
+      case Some(location) =>
+        Left(on(getErrorResponse(Status.Found)) { res =>
+          res.location = s"$location${if (location.endsWith("/")) "" else "/"}$indexFile"
+          logger.debug(s"directory redirect to: ${res.location.getOrElse("???")}")
+        })
+      case None =>
+        logger.debug(s"original request is not available: $request")
+        Left(getErrorResponse(Status.Forbidden))
     }
   } else if (!docroot.toFile.exists()) {
     // docroot ディレクトリが存在しない場合はデフォルトのページを表示
