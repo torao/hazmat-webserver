@@ -5,11 +5,12 @@ import java.nio.file.Path
 import java.util.Date
 
 import at.hazm.on
-import at.hazm.webserver.{_}
+import at.hazm.util.Cache
+import at.hazm.webserver._
 import com.twitter.finagle.http.{Request, Response, Status, Version}
 import org.slf4j.LoggerFactory
 
-class FileHandler(docroot:Path, sendBufferSize:Int) extends RequestHandler(docroot) {
+class FileHandler(docroot:Path, sendBufferSize:Int, mime:Cache[MimeType]) extends RequestHandler(docroot) {
   assert(docroot.toString == docroot.toAbsolutePath.toString)
 
   import FileHandler._
@@ -18,12 +19,13 @@ class FileHandler(docroot:Path, sendBufferSize:Int) extends RequestHandler(docro
     case Some(file) =>
       getResource(request, file) match {
         case Right(resource) =>
-          resource.lastModified.flatMap{ lastModified =>
+          resource.lastModified.flatMap { lastModified =>
             ifModifiedSince(request, lastModified)
           }.getOrElse {
             on(Response(Version.Http11, Status.Ok, resource.reader)) { res =>
               resource.lastModified.foreach { lastModified => res.headerMap.add("Last-Modified", new Date(lastModified)) }
               resource.length.foreach { length => res.contentLength = length }
+              res.contentType = mime.get.apply(request.fileExtension)
             }
           }
         case Left(response) => response
@@ -86,7 +88,7 @@ object FileHandler {
     * @return ローカルファイル
     */
   def mapLocalFile(docroot:Path, uri:String):Option[File] = {
-    val path = uri.takeWhile{ ch => ch != '?' && ch != '#' }
+    val path = uri.takeWhile { ch => ch != '?' && ch != '#' }
     val requestPath = docroot.resolve(path.dropWhile(_ == '/')).toAbsolutePath
     if (!requestPath.toString.startsWith(docroot.toString)) {
       logger.debug(s"invalid uri: $requestPath isn't start with $docroot")
@@ -94,8 +96,15 @@ object FileHandler {
     } else Some(requestPath.toFile)
   }
 
+  /**
+    * 指定された日時がリクエストの If-Modified-Since より後の場合に 304 Not Modified レスポンスを生成する。
+    *
+    * @param request      リクエスト
+    * @param lastModified If-Modified-Since と比較する日時
+    * @return 304 レスポンスまたは None
+    */
   def ifModifiedSince(request:Request, lastModified:Long):Option[Response] = request.getDateHeader("If-Modified-Since").flatMap { ifModifiedSince =>
-    if((ifModifiedSince.getTime - lastModified) / 1000 >= 0){
+    if ((ifModifiedSince.getTime - lastModified) / 1000 >= 0) {
       Some(on(Response(Version.Http11, Status.NotModified)) { res =>
         res.cacheControl = "no-cache"
       })

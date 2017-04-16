@@ -8,6 +8,7 @@ import java.util.logging.LogRecord
 
 import at.hazm.util.Cache
 import at.hazm.util.Cache.FileSource
+import at.hazm.webserver.handler.MimeType
 import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
 
@@ -22,8 +23,10 @@ class Context private[this](val dir:File, timestampCheckInterval:Long) {
   val cache = new File(dir, "cache")
 
   object config {
-    private[this] val cache = new Cache.Manager(new FileSource(new File(dir, "conf")), Config.Builder, timestampCheckInterval)
+    private[this] val source = new FileSource(new File(dir, "conf"))
+    private[this] val cache = new Cache.Manager(source, Config.Builder, timestampCheckInterval)
     val server:Cache[Config] = cache.cache("server.conf")
+    val mime:Cache[MimeType] = new Cache("mime.conf", source, MimeType.Builder, timestampCheckInterval)
   }
 
   def init():Unit = {
