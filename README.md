@@ -19,8 +19,10 @@ HazMat Server はそのために実装した特別なサーバだ。
 
 ## Boot Server
 
+Java 8 の最新版が必要。
+
 ```
-$ sbt "runMain at.hazm.webserver.Server $SERVER_HOME"
+$ ./sbt "runMain at.hazm.webserver.Server $SERVER_HOME"
 ```
 
 `$SERVER_HOME` はコンテンツやサーバ設定を記述したディレクトリだ。省略した場合は起動時のカレントディレクトリ `.` を指定したのと同じ意味。
@@ -52,6 +54,13 @@ $ sbt "runMain at.hazm.webserver.Server $SERVER_HOME"
 
 XSL で変換されたファイルは元の XML や XSL が更新されない限り変化しないためローカルディスク `$SERVER_HOME/cache` のどこかに保存される。
 だからサーバが起動して最初のリクエストは遅いが 2 度目の要求からは静的なファイルを返すのとほぼ同じ速度となるだろう。
+
+### Available Template Processing
+
+| Source | Depends        | Destination | Features      |
+|:-------|:---------------|:------------|:--------------|
+| *.xml  | *.xml, *.xsl   | *.html      | XInclude, XSL |
+| *.scss |                | *.css       | SCSS          |
 
 ## Scripts Processing
 
