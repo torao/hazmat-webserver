@@ -1,6 +1,6 @@
 # HazMat Web Server
 
-Asynchronous Templates & API Scripting Server for https://hazm.at.
+Asynchronous Templates & API Scripting HTTP Server for http://hazm.at/.
 
 ## Quick Start
 
