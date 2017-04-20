@@ -25,7 +25,7 @@ class Config(val source:URL, val config:com.typesafe.config.Config) {
             default
         }
       case None =>
-        logger.debug(s"$key = $default")
+        logger.debug(s"$key = $default (default)")
         default
     }
   }

@@ -17,13 +17,24 @@ import scala.annotation.tailrec
 class Context private[this](val dir:File, timestampCheckInterval:Long) {
   private[this] val logger = LoggerFactory.getLogger(getClass)
 
+  logger.debug(s"application context: ${dir.getAbsolutePath}")
+
   def this(dir:String, timestampCheckInterval:Long) = this(new File(dir).getCanonicalFile, timestampCheckInterval)
 
   val docroot = new File(dir, "docroot")
+  if(! docroot.exists()){
+    logger.warn(s"docroot directory is not exist: ${docroot.getAbsolutePath}")
+  }
+
   val cache = new File(dir, "cache")
 
   object config {
-    private[this] val source = new FileSource(new File(dir, "conf"))
+    private[this] val confDir = new File(dir, "conf")
+    if(! confDir.exists()){
+      logger.warn(s"configuration directory is not exist: ${confDir.getAbsolutePath} (not exists)")
+    }
+
+    private[this] val source = new FileSource(confDir)
     private[this] val cache = new Cache.Manager(source, Config.Builder, timestampCheckInterval)
     val server:Cache[Config] = cache.cache("server.conf")
     val mime:Cache[MimeType] = new Cache("mime.conf", source, MimeType.Builder, timestampCheckInterval)

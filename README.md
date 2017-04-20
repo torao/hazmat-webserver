@@ -1,11 +1,34 @@
-# HazMat Server
+# HazMat Web Server
 
 Asynchronous Templates & API Scripting Server for https://hazm.at.
 
+## Quick Start
+
+You can use [the Docker image](https://cloud.docker.com/swarm/torao/repository/docker/torao/hazmat-webserver/general) which you can try immediately by just creating the site directory.
+Place `docroot`, `cache`, `conf` under the directory `$SERVER_HOME` and NOTE that the `cache` have to be
+777 permission to write temporary data by server.
+
+```
+$ mkdir $SERVER_HOME/cache
+$ chmod 777 $SERVER_HOME/cache
+$ cat $SITE/docroot/index.html
+<html>
+...
+</html>
+$ cat $SERVER_HOME/conf/server.conf
+server.bind-address = "0.0.0.0:8088"
+
+$ sudo docker run --rm -it -p 8088:8088 -v $SERVER_HOME:/opt/site torao/hazmat-webserver /opt/site
+$ curl http://localhost:8088/index.html
+<html>
+...
+</html>
+```
+
 ## Introduction
 
-HazMat Server はテンプレートエンジンと API スクリプティングのみに特化した Web サーバだ。
-どこかのインディアンみたいな HTML を返すだけの Web サーバじゃねえし、赤錆びた線路みたいなフルスタック Web フレームワークでもねえ。
+HazMat Web Server はテンプレートエンジンと API スクリプティングのみに特化した Web サーバだ。
+どこかのインディアン Web サーバじゃねえし、赤錆びた線路みたいなフルスタック Web フレームワークでもねえ。
 その中間を埋めるサーバだ。
 
 メテーのサイトを構築するのにタダの HTTP サーバに静的なコンテンツじゃページごとのレイアウトを統一的に管理できなくて超不便じゃん?
@@ -17,7 +40,7 @@ CMS は便利だがスキームがブログや Wiki なんかに特化してる�
 HazMat Server はそのために実装した特別なサーバだ。
 
 
-## Boot Server
+## Startup Server
 
 Java 8 の最新版が必要。
 
@@ -29,18 +52,20 @@ $ ./sbt "runMain at.hazm.webserver.Server $SERVER_HOME"
 `$SERVER_HOME/docroot` がサイト URL のルートとマッピングされるからトップページはここに置いておけばいい。
 
 ```
-＄SERVER_HOME
-  +- conf
+＄SERVER_HOME/
+  +- conf/
       +- server.conf
-  +- docroot
+  +- docroot/
       +- index.html
       +- ...
+  +-- cache/
 ```
+
+`$SERVER_HOME/cache` にはサーバが一時ファイルを書き込むため多くの場合 777 パーミッションを設定しなければならない。
 
 以下 `$SERVER_HOME/docroot` を `$DOCROOT` と記す。
 
 テンプレート処理の対象外のファイルは通常の静的ファイルと同様に要求があればそのままクライアントへ送信されるだろう。
-実にシンプルだ。
 
 ## Templates Processing
 
@@ -61,6 +86,59 @@ XSL で変換されたファイルは元の XML や XSL が更新されない限
 |:-------|:---------------|:------------|:--------------|
 | *.xml  | *.xml, *.xsl   | *.html      | XInclude, XSL |
 | *.scss |                | *.css       | SCSS          |
+
+### XSLT Processing
+
+_filename_.html にリクエストしたケースを考える。もし docroot 以下に該当する _filename_.html が存在しない代わりに _filename_.**xml**
+があった場合、サーバは XSL Translation 処理を行った結果を _filename_.html のレスポンスとして返す。
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<?xsl-stylesheet type="text/xsl" href="template.xsl"?>
+<html>
+  <head>
+    <title>Welcome My Site</title>
+  </head>
+  <body>
+  <p>This is Sample Site.</p>
+  </body>
+</html>
+```
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+  <xsl:template match="/html">
+    <html lang="en">
+      <xsl:apply-templates/>
+    </html>
+  </xsl:template>
+  <xsl:template match="head">
+    <head>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+      <meta charset="utf-8"/>
+      <meta name="author" content="your name"/>
+      <meta name="viewport" content="width=device-width, initial-scale=1"/>
+      <link rel="shortcut icon" href="/favicon.png" type="image/png" />
+      <link rel="icon" href="/favicon.png" type="image/png" />
+      <link rel="stylesheet" href="/stylesheet/common.css"/>
+      <xsl:copy-of select="*" />
+    </head>
+  </xsl:template>
+  <xsl:template match="body">
+    <body>
+      <nav><img src="/header.png"/></nav>
+      <div class="main">
+        <xsl:copy-of select="node()"/>
+      </div>
+      <footer>Copyright &#169; 2017 your name. All Rights Reserved.</footer>
+    </body>
+  </xsl:template>
+</xsl:stylesheet>
+```
+
+コンテンツの作成は純粋な xhtml のみで記述する
+もちろん元のコンテンツは xhtml である必要はなく、独自スキーマをもつ XML でもよい。
 
 ## Scripts Processing
 

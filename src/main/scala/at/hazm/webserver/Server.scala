@@ -25,7 +25,7 @@ class Server {
     * @param context サーバ設定
     */
   def startup(context:Context):Unit = if (closed.compareAndSet(true, false)) {
-    logger.debug(s"starting server...")
+    logger.info(s"starting server: ${context.dir} (directory ${if(context.dir.exists()) "available" else "not available"})")
     context.init()
     val config = context.config.server.get
 
@@ -61,8 +61,10 @@ object Server {
   private[Server] val logger = LoggerFactory.getLogger(getClass.getName.dropRight(1))
 
   def main(args:Array[String]):Unit = {
+    logger.debug(s"${classOf[Server].getName}.main(${args.mkString("\"", "\", \"", "\"")})")
 
-    val context = new Context(if (args.nonEmpty) args.head else ".", 2 * 1000L)
+    val dir = args.headOption.getOrElse(".")
+    val context = new Context(dir, 2 * 1000L)
     val server = new Server()
 
     while (true) {

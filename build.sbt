@@ -20,3 +20,22 @@ libraryDependencies ++= Seq(
   "com.vaadin" % "vaadin-sass-compiler" % "0.9.13",
   "org.slf4j"     % "slf4j-log4j12"  % "1.7.+"
 )
+
+// Docker image settings
+
+enablePlugins(JavaServerAppPackaging, DockerPlugin)
+
+dockerBaseImage in Docker := "java:8-jdk-alpine"
+
+// version in Docker := new java.text.SimpleDateFormat("yyyyMMddHHmm").format(new java.util.Date())
+version in Docker := "latest"
+
+maintainer in Docker := "TAKAMI Torao <koiroha@mail.com>"
+
+packageName in Docker := "torao/hazmat-webserver"
+
+dockerExposedPorts in Docker := Seq(8089, 80)
+
+dockerUpdateLatest in Docker := true
+
+dockerRepository in Docker := Some("torao/hazmat-webserver")
