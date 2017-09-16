@@ -15,7 +15,7 @@ import org.xml.sax.InputSource
 class XSLTEngine extends TemplateEngine {
   override def extensionMap:Map[String, String] = Map("xml" -> "html", "xhtml" -> "html")
 
-  override def transform(file:File, in:InputStream, out:OutputStream):Dependency = {
+  override def transform(file:File, in:InputStream, out:OutputStream, param: => Map[String, String]):Dependency = {
 
     // XML のロード
     val rawDOM = {
@@ -28,7 +28,7 @@ class XSLTEngine extends TemplateEngine {
     val xincludes = getXInclude(file, rawDOM.getDocumentElement)
 
     // XInclude が含まれているなら再読み込み
-    val dom = if (xincludes.isEmpty) rawDOM
+    val dom = if(xincludes.isEmpty) rawDOM
     else {
       val factory = DocumentBuilderFactory.newInstance()
       factory.setXIncludeAware(true)
@@ -45,6 +45,9 @@ class XSLTEngine extends TemplateEngine {
         val xsl = new StreamSource(path.toURL.openStream())
         val factory = TransformerFactory.newInstance()
         val transformer = factory.newTransformer(xsl)
+        param.foreach { case (key, value) =>
+          transformer.setParameter(key, value)
+        }
         transformer.transform(new DOMSource(dom), new StreamResult(out))
         Dependency(file +: new File(path) +: xincludes:_*)
       case None =>
@@ -60,7 +63,7 @@ class XSLTEngine extends TemplateEngine {
     */
   private[this] def getStylesheet(doc:Document):Option[String] = {
     val items = doc.getChildNodes
-    val nodes = for (i <- 0 until items.getLength) yield items.item(i)
+    val nodes = for(i <- 0 until items.getLength) yield items.item(i)
     nodes.collect {
       case pi:ProcessingInstruction if pi.getTarget == "xml-stylesheet" => pi.getData
     }.collectFirst { case HREF(uri) => uri }
@@ -71,12 +74,12 @@ class XSLTEngine extends TemplateEngine {
     */
   private[this] def getXInclude(file:File, elem:Element):Seq[File] = {
     val items = elem.getChildNodes
-    val elems = (for (i <- 0 until items.getLength) yield items.item(i)).collect { case e:Element => e }
+    val elems = (for(i <- 0 until items.getLength) yield items.item(i)).collect { case e:Element => e }
     val hrefs = elems.filter { elem =>
       elem.getNamespaceURI == "http://www.w3.org/2001/XInclude" && elem.getLocalName == "include"
     }.map(_.getAttribute("href")).filter(_.nonEmpty).flatMap { path =>
       val uri = URI.create(path)
-      if (!uri.isAbsolute){
+      if(!uri.isAbsolute) {
         Some(new File(file.toURI.resolve(uri)))
       } else if(uri.getScheme == "file") Some(new File(uri)) else None
     }

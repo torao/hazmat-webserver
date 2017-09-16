@@ -16,7 +16,7 @@ class SASSEngine extends TemplateEngine {
   private[SASSEngine] val logger = LoggerFactory.getLogger(classOf[SASSEngine])
   override def extensionMap:Map[String, String] = Map("sass" -> "css", "scss" -> "css")
 
-  override def transform(file:File, in:InputStream, out:OutputStream):Dependency = {
+  override def transform(file:File, in:InputStream, out:OutputStream, param: =>Map[String,String]):Dependency = {
     val parent = new ScssStylesheet()
     parent.addResolver((parentStylesheet:ScssStylesheet, identifier:String) => {
       val f = new File(identifier)

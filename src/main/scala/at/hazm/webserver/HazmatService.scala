@@ -2,7 +2,7 @@ package at.hazm.webserver
 
 import java.nio.charset.StandardCharsets
 import java.util.Date
-import java.util.concurrent.{Executors, ThreadFactory}
+import java.util.concurrent.Executors
 
 import at.hazm.on
 import at.hazm.webserver.handler.{FileHandler, ScriptHandler, TemplateHandler}
@@ -16,12 +16,10 @@ import scala.concurrent.{ExecutionContext, Future => SFuture}
 import scala.util.{Failure, Success}
 
 class HazmatService(context:Context) extends TFService[Request, Response] {
-  private[this] implicit val _context = ExecutionContext.fromExecutor(Executors.newCachedThreadPool(new ThreadFactory {
-    override def newThread(r:Runnable):Thread = {
-      val t = new Thread(r, "HazMat")
-      t.setDaemon(true)
-      t
-    }
+  private[this] implicit val _context = ExecutionContext.fromExecutor(Executors.newCachedThreadPool((r:Runnable) => {
+    val t = new Thread(r, "HazMat")
+    t.setDaemon(true)
+    t
   }))
 
   private[this] val serverConfig = context.config.server.get

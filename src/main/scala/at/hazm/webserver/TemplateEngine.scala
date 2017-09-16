@@ -16,7 +16,7 @@ trait TemplateEngine {
     */
   def extensionMap:Map[String, String]
 
-  def transform(file:File, in:InputStream, out:OutputStream):Dependency
+  def transform(file:File, in:InputStream, out:OutputStream, param: =>Map[String,String]):Dependency
 }
 
 object TemplateEngine {
@@ -51,7 +51,7 @@ object TemplateEngine {
       * @param cache     テンプレート適用後の出力先
       * @return テンプレートが適用された場合に Some(lastModified)
       */
-    def transform(specified:File, cache:File):Option[Long] = {
+    def transform(specified:File, cache:File, param:Map[String,String]):Option[Long] = {
       val info = meta.computeIfAbsent(cache, { _ => new MetaInfo() })
       val tm = System.currentTimeMillis()
       info.synchronized {
@@ -60,7 +60,7 @@ object TemplateEngine {
           if (info.dependency.forall(_.isUpdated)) {
             cache.delete()
             val start = System.currentTimeMillis()
-            rebuild(specified, cache).foreach { dependency =>
+            rebuild(specified, cache, param).foreach { dependency =>
               val tm = System.currentTimeMillis() - start
               logger.debug(f"compiled: [${dependency.files.map(_.getName).mkString(", ")}%s] -> ${cache.getName} ($tm%,dms)")
               info.dependency = Some(dependency)
@@ -78,7 +78,7 @@ object TemplateEngine {
       * @param output    テンプレート適用後の出力先
       * @return テンプレートの適用に成功した場合、その依存ファイル
       */
-    private[this] def rebuild(specified:File, output:File):Option[Dependency] = {
+    private[this] def rebuild(specified:File, output:File, param:Map[String,String]):Option[Dependency] = {
       val extension = getExtension(specified).toLowerCase
       engines.view.flatMap { engine =>
         // 要求されたファイルへ変換するためのソースファイルとテンプレートエンジンを選択
@@ -95,7 +95,7 @@ object TemplateEngine {
           val temp = File.createTempFile("building-", ".tmp", parent)
           try {
             val dependency = using(new BufferedOutputStream(new FileOutputStream(temp))) { out =>
-              engine.transform(src, in, out)
+              engine.transform(src, in, out, param)
             }
             if (!temp.renameTo(output)) {
               output.delete()
