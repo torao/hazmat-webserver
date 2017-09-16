@@ -44,8 +44,8 @@ object TemplateEngine {
     private[this] val meta = new ConcurrentHashMap[File, MetaInfo]()
 
     /**
-      * 要求されたファイルからテンプレートを選択し適用する。メソッドが true を返した場合、テンプレートの適用結果を cache から読みだす
-      * ことができる。
+      * 要求されたファイルからテンプレートを選択し適用する。メソッドが Some を返した場合、テンプレートの適用結果を cache
+      * から読みだすことができる。
       *
       * @param specified 要求されたファイル
       * @param cache     テンプレート適用後の出力先

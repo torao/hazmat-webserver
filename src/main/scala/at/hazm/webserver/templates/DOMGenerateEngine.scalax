@@ -1,0 +1,57 @@
+package at.hazm.webserver.templates
+
+import java.io.{File, InputStream, OutputStream}
+import java.net.URI
+import javax.xml.namespace.QName
+import javax.xml.transform.dom.DOMSource
+import javax.xml.xpath.{XPathConstants, XPathFactory}
+
+import at.hazm.webserver.TemplateEngine
+import at.hazm.webserver.TemplateEngine.Dependency
+import org.w3c.dom.{Document, Element, Node, NodeList}
+
+abstract class DOMGenerateEngine(supportedExtensions:String*) extends TemplateEngine {
+  val extensionMap:Map[String, String] = supportedExtensions.map(_ -> "html").toMap
+
+  def transform(file:File, in:InputStream, out:OutputStream):Dependency = {
+
+  }
+
+  protected def transform(file:File, in:InputStream):(Document, Dependency)
+
+  /**
+    * 指定された要素以下の XInclude を解決する。
+    */
+  private[this] def getXInclude(file:File, elem:Element):Seq[File] = {
+    val items = elem.getChildNodes
+    val elems = (for (i <- 0 until items.getLength) yield items.item(i)).collect {
+      case xi:Element if elem.getNamespaceURI == "http://www.w3.org/2001/XInclude" && elem.getLocalName == "include" =>
+        val href = xi.getAttribute("href")
+      xi
+    }
+    val hrefs = elems.filter { elem =>
+      elem.getNamespaceURI == "http://www.w3.org/2001/XInclude" && elem.getLocalName == "include"
+    }.map(_.getAttribute("href")).filter(_.nonEmpty).flatMap { path =>
+      val uri = URI.create(path)
+      if (!uri.isAbsolute){
+        Some(new File(file.toURI.resolve(uri)))
+      } else if(uri.getScheme == "file") Some(new File(uri)) else None
+    }
+    elems.flatMap { e => getXInclude(file, e) }
+  }
+
+  private[this] val XPOINTER = "([a-zA-Z0-9]+)\\((.*)\\)".r
+  private[this] def resolveXPointer(xpointer:String, doc:Document):Seq[Node] = xpointer match {
+    case XPOINTER("xpointer", path) =>
+      val xpath = XPathFactory.newInstance().newXPath()
+      val nl = xpath.evaluate(path, new DOMSource(doc), XPathConstants.NODESET).asInstanceOf[NodeList]
+      for(i <- nl.getLength) yield nl.item(i)
+    case XPOINTER("element", path) =>
+      path.split("/").map(_.toInt).foldLeft(Seq(doc.getDocumentElement)){ case (elems, i) =>
+          elems(i).getChildNodes
+      }
+    case XPOINTER("xmns", path) =>
+    case XPOINTER(unknown, _) =>
+    case unsupported => ()
+  }
+}
