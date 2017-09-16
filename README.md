@@ -105,6 +105,8 @@ _filename_.html にリクエストしたケースを考える。もし docroot �
 </html>
 ```
 
+以下はこの xhtml をブラウザ表示用に変換する `template.xsl` だ。
+
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
@@ -137,8 +139,8 @@ _filename_.html にリクエストしたケースを考える。もし docroot �
 </xsl:stylesheet>
 ```
 
-コンテンツの作成は純粋な xhtml のみで記述する
-もちろん元のコンテンツは xhtml である必要はなく、独自スキーマをもつ XML でもよい。
+このように共通のレイアウトを XSL 側に記述することでコンテンツとなる xhtml の作成に注力することができる。
+もちろん元のコンテンツは xhtml である必要はなく独自スキーマをもつ XML でもかまわない。
 
 ## Scripts Processing
 

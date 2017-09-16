@@ -23,7 +23,7 @@ libraryDependencies ++= Seq(
 
 // Docker image settings
 
-enablePlugins(JavaServerAppPackaging, DockerPlugin)
+enablePlugins(JavaServerAppPackaging, UniversalPlugin, DockerPlugin)
 
 dockerBaseImage in Docker := "java:8-jdk-alpine"
 
