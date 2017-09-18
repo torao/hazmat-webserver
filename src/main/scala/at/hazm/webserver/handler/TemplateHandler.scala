@@ -24,7 +24,8 @@ class TemplateHandler(docroot:Path, cachedir:Path, mime:Cache[MimeType], manager
             "method" -> request.method.name,
             "uri" -> request.uri,
             "path" -> request.path,
-            "host" -> request.proxiedRemoteHost
+            "host" -> request.requestedHost.getOrElse("localhost"),
+            "scheme" -> request.requestedProto
           )).flatMap { lastModified =>
             FileHandler.ifModifiedSince(request, lastModified).orElse{
               Some(on(Response(Version.Http11, Status.Ok, Reader.fromFile(cache))) { res =>

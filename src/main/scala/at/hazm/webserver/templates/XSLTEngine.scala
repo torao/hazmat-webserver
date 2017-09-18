@@ -20,6 +20,8 @@ class XSLTEngine extends TemplateEngine {
     // XML のロード
     val rawDOM = {
       val factory = DocumentBuilderFactory.newInstance()
+      factory.setNamespaceAware(true)
+      factory.setXIncludeAware(false)
       val builder = factory.newDocumentBuilder()
       builder.parse(in, file.toURI.toString)
     }
@@ -31,6 +33,7 @@ class XSLTEngine extends TemplateEngine {
     val dom = if(xincludes.isEmpty) rawDOM
     else {
       val factory = DocumentBuilderFactory.newInstance()
+      factory.setNamespaceAware(true)
       factory.setXIncludeAware(true)
       val builder = factory.newDocumentBuilder()
       val is = new InputSource(new StringReader(serialize(rawDOM)))
