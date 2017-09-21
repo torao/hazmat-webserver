@@ -234,3 +234,7 @@ HazMat サーバのスクリプトエンジンは Node.js なんかじゃねえ�
 コンテキストはスクリプトファイルの実行ごとに隔離されているからスクリプト間で直接データの受け渡しすることはできない。
 外部スクリプトの読み込み、外部設定、DB やファイルアクセスなどは将来的に (俺の) 需要があれば実装するかもしれない。
 
+## Docker
+
+`sbt docker:publishLocal` でローカルの docker にイメージを作成する。
+Windows の場合は Docker ターミナルから行うこと。また Docker Hub に対して `sbt docker:publish` を行う場合は先に `docker login` を行うこと。

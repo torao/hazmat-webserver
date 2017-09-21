@@ -4,7 +4,6 @@ import java.io._
 import java.util.concurrent.ConcurrentHashMap
 
 import at.hazm.using
-import at.hazm.webserver.TemplateEngine.Dependency
 import org.slf4j.LoggerFactory
 
 trait TemplateEngine {
@@ -21,17 +20,6 @@ trait TemplateEngine {
 
 object TemplateEngine {
   private[TemplateEngine] val logger = LoggerFactory.getLogger(getClass.getName.dropRight(1))
-
-  case class Dependency(files:File*) {
-    assert(files.nonEmpty)
-    private[this] val filesLastModified = lm()
-
-    private[this] def lm():Seq[Long] = files.map(_.lastModified())
-
-    val lastModified = filesLastModified.max
-
-    def isUpdated:Boolean = filesLastModified.zip(lm()).exists { case (a, b) => a != b }
-  }
 
   private[this] class MetaInfo {
     var verifiedAt = 0L
@@ -62,7 +50,11 @@ object TemplateEngine {
             val start = System.currentTimeMillis()
             rebuild(specified, cache, param).foreach { dependency =>
               val tm = System.currentTimeMillis() - start
-              logger.debug(f"compiled: [${dependency.files.map(_.getName).mkString(", ")}%s] -> ${cache.getName} ($tm%,dms)")
+              if(logger.isDebugEnabled){
+                val prefix = specified.getParentFile.toURI
+                val items = dependency.urls.map(_.toURI).map(i => prefix.relativize(i))
+                logger.debug(f"compiled: [${items.mkString(", ")}%s] -> ${cache.getName} ($tm%,dms)")
+              }
               info.dependency = Some(dependency)
             }
           }
