@@ -6,8 +6,7 @@ import java.util.Date
 
 import at.hazm._
 import at.hazm.util.Cache
-import at.hazm.webserver.TemplateEngine
-import at.hazm.webserver._
+import at.hazm.webserver.{TemplateEngine, _}
 import com.twitter.finagle.http.{Request, Response, Status, Version}
 import com.twitter.io.Reader
 import org.slf4j.LoggerFactory
@@ -17,17 +16,18 @@ class TemplateHandler(docroot:Path, cachedir:Path, mime:Cache[MimeType], manager
 
   override def apply(request:Request):Option[Response] = FileHandler.mapLocalFile(docroot, request.uri) match {
     case Some(file) =>
-      if (file.exists()) None else {
+      if(file.exists()) None else {
         val cache = FileHandler.mapLocalFile(cachedir, request.uri).get
         try {
+          val force = request.headerMap.get("Cache-Control").contains("no-cache")
           manager.transform(file, cache, Map(
             "method" -> request.method.name,
             "uri" -> request.uri,
             "path" -> request.path,
             "host" -> request.requestedHost.getOrElse("localhost"),
             "scheme" -> request.requestedProto
-          )).flatMap { lastModified =>
-            FileHandler.ifModifiedSince(request, lastModified).orElse{
+          ), force).flatMap { lastModified =>
+            FileHandler.ifModifiedSince(request, lastModified).orElse {
               Some(on(Response(Version.Http11, Status.Ok, Reader.fromFile(cache))) { res =>
                 res.headerMap.add("Last-Modified", new Date(lastModified))
                 res.contentLength = cache.length()

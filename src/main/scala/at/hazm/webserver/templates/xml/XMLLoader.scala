@@ -23,6 +23,8 @@ import scala.util.Try
 object XMLLoader {
   private[this] val logger = LoggerFactory.getLogger(getClass.getName.dropRight(1))
 
+  val URI_XINCLUDE = "http://www.w3.org/2001/XInclude"
+
   /**
     * 指定された URL からプレーンテキストを読み出します。
     *
@@ -87,6 +89,17 @@ object XMLLoader {
     val deps = getIncludes(doc.getDocumentElement).map { include =>
       resolve(include, url, param)
     }.reduceLeftOption(_ + _).getOrElse(Dependency())
+
+    // ドキュメント内からすべての xmlns:xi 宣言を削除
+    doc.foreach{ elem =>
+      val attrs = elem.getAttributes
+      (for(i <- 0 until attrs.getLength) yield attrs.item(i)).collect{ case a:Attr => a }.toList.foreach { a =>
+        if((a.getPrefix == "xmlns" || a.getName == "xmlns" || a.getName.startsWith("xmlns:")) && a.getValue == URI_XINCLUDE){
+          elem.removeAttributeNode(a)
+        }
+      }
+    }
+
     val (doc2, dep2) = resolveStylesheet(doc, url, param)
     (doc2, dep2 + deps)
   }
@@ -157,7 +170,9 @@ object XMLLoader {
         val (stylesheet, deps) = load(url, param)
 
         val factory = TransformerFactory.newInstance()
-        val transformer = factory.newTransformer(new DOMSource(stylesheet))
+        val style = new DOMSource(stylesheet)
+        // val style = new StreamSource(url.toString)
+        val transformer = factory.newTransformer(style)
         param.foreach { case (key, value) =>
           transformer.setParameter(key, value)
         }
@@ -199,7 +214,7 @@ object XMLLoader {
     val items = elem.getChildNodes
     val elems = (for(i <- 0 until items.getLength) yield items.item(i)).collect { case e:Element => e }
     elems.filter { e =>
-      e.getNamespaceURI == "http://www.w3.org/2001/XInclude" && eval(e)
+      e.getNamespaceURI == URI_XINCLUDE && eval(e)
     } ++ elems.flatMap(e => getXInclude(eval, e))
   }
 

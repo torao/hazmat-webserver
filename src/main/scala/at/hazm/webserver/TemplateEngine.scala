@@ -32,20 +32,20 @@ object TemplateEngine {
     private[this] val meta = new ConcurrentHashMap[File, MetaInfo]()
 
     /**
-      * 要求されたファイルからテンプレートを選択し適用する。メソッドが true を返した場合、テンプレートの適用結果を cache から読みだす
+      * 要求されたファイルからテンプレートを選択し適用する。メソッドが Some を返した場合、テンプレートの適用結果を cache から読みだす
       * ことができる。
       *
       * @param specified 要求されたファイル
       * @param cache     テンプレート適用後の出力先
-      * @return テンプレートが適用された場合に Some(lastModified)
+      * @return キャッシュファイル file からテンプレート適用後のデータを読み出し可能な場合にその Some(lastModified)
       */
-    def transform(specified:File, cache:File, param:Map[String,String]):Option[Long] = {
+    def transform(specified:File, cache:File, param:Map[String,String], force:Boolean):Option[Long] = {
       val info = meta.computeIfAbsent(cache, { _ => new MetaInfo() })
       val tm = System.currentTimeMillis()
       info.synchronized {
-        if (info.verifiedAt + interval < tm) {
+        if (info.verifiedAt + interval < tm || force) {
           info.verifiedAt = tm
-          if (info.dependency.forall(_.isUpdated)) {
+          if (info.dependency.forall(_.isUpdated) || force) {
             cache.delete()
             val start = System.currentTimeMillis()
             rebuild(specified, cache, param).foreach { dependency =>

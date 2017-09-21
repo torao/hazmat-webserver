@@ -23,9 +23,6 @@ class XSLTEngine extends TemplateEngine {
     }
 
     val transformer = TransformerFactory.newInstance().newTransformer()
-    transformer.setOutputProperty("method", "html")
-    transformer.setOutputProperty("omit-xml-declaration", "yes")
-    transformer.setOutputProperty("indent", "yes")
     transformer.transform(new DOMSource(doc), new StreamResult(out))
     Dependency(file.toURI.toURL) + dependency + dependencies.reduceLeftOption(_+_).getOrElse(Dependency())
   }
