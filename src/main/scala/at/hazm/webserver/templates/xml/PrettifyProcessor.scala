@@ -25,6 +25,7 @@ class PrettifyProcessor extends DocumentProcessor {
     // doc.getDocumentElement.setAttribute("xmlns", "http://www.w3.org/1999/xhtml")
     concatJapanese(doc.getDocumentElement)
     setIndent(doc.getDocumentElement, 0)
+    doc.foreach(_.removeAttribute("xmlns"))
     Dependency()
   }
 
