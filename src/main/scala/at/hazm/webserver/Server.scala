@@ -69,7 +69,7 @@ object Server {
 
     while (true) {
       context.config.server.get
-      context.config.server.onUpdate { (_, config) =>
+      context.config.server.onUpdate { (_, _) =>
         server.shutdown()
       }
       server.startup(context)
@@ -171,12 +171,10 @@ object Server {
         }
       }
       timer.schedule(task, delay)
-      (promise.future, new Cancelable() {
-        override def cancel():Unit = {
-          task.cancel()
-          promise.synchronized {
-            if (!promise.isCompleted) promise.failure(TimeoutException("task canceled"))
-          }
+      (promise.future, () => {
+        task.cancel()
+        promise.synchronized {
+          if(!promise.isCompleted) promise.failure(TimeoutException("task canceled"))
         }
       })
     }

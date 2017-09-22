@@ -18,6 +18,12 @@ package object webserver {
       case None => request.remoteHost
     }
 
+    def requestedProto:String = request.headerMap.getOrElse("X-Forwarded-Proto", "http")
+
+    def requestedHost:Option[String] = request.headerMap.get("X-Forwarded-Host").orElse(
+      request.headerMap.get("Host")
+    )
+
     def originalURL:Option[String] = {
       request.headerMap.get("X-Forwarded-Host").orElse(request.host).flatMap { host =>
         val scheme = request.headerMap.get("X-Forwarded-Proto").getOrElse("http")

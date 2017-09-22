@@ -2,9 +2,9 @@ name := "webserver"
 
 organization := "at.hazm"
 
-version := "1.0"
+version := "1.0.1"
 
-scalaVersion := "2.12.2"
+scalaVersion := "2.12.3"
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
 
@@ -23,12 +23,13 @@ libraryDependencies ++= Seq(
 
 // Docker image settings
 
-enablePlugins(JavaServerAppPackaging, DockerPlugin)
+enablePlugins(JavaServerAppPackaging, UniversalPlugin, DockerPlugin)
 
 dockerBaseImage in Docker := "java:8-jdk-alpine"
 
 // version in Docker := new java.text.SimpleDateFormat("yyyyMMddHHmm").format(new java.util.Date())
-version in Docker := "latest"
+//version in Docker := "latest"
+version in Docker := version.value
 
 maintainer in Docker := "TAKAMI Torao <koiroha@mail.com>"
 
@@ -38,4 +39,4 @@ dockerExposedPorts in Docker := Seq(8089, 80)
 
 dockerUpdateLatest in Docker := true
 
-dockerRepository in Docker := Some("torao/hazmat-webserver")
+// dockerRepository in Docker := Some("torao/hazmat-webserver")
