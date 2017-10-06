@@ -19,7 +19,7 @@ abstract class RequestHandler(docroot:Path) {
   import RequestHandler._
   def apply(request:Request):Option[Response]
 
-  def getErrorResponse(status:Status):Response = {
+  def getErrorResponse(request:Request, status:Status):Response = {
     val dir = new File(docroot.toFile, "error")
     val file = new File(dir, s"${status.code}.html")
     val reader = if (file.isFile) {

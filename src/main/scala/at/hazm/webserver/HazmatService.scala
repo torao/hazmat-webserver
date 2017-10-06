@@ -5,18 +5,18 @@ import java.util.Date
 import java.util.concurrent.Executors
 
 import at.hazm.on
-import at.hazm.webserver.handler.{FileHandler, ScriptHandler, TemplateHandler}
+import at.hazm.webserver.handler.{FileHandler, RedirectHandler, ScriptHandler, TemplateHandler}
 import at.hazm.webserver.templates.{SASSEngine, TypeScriptEngine, XSLTEngine}
 import com.twitter.finagle.http._
 import com.twitter.finagle.{Service => TFService}
 import com.twitter.io.{Bufs, Reader}
 import com.twitter.util.{Future, Promise}
 
-import scala.concurrent.{ExecutionContext, Future => SFuture}
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future => SFuture}
 import scala.util.{Failure, Success}
 
 class HazmatService(context:Context) extends TFService[Request, Response] {
-  private[this] implicit val _context = ExecutionContext.fromExecutor(Executors.newCachedThreadPool((r:Runnable) => {
+  private[this] implicit val _context:ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newCachedThreadPool((r:Runnable) => {
     val t = new Thread(r, "HazMat")
     t.setDaemon(true)
     t
@@ -31,6 +31,7 @@ class HazmatService(context:Context) extends TFService[Request, Response] {
 
   /** 同期で実行するリクエストハンドラ。 */
   private[this] val handlers = Seq(
+    new RedirectHandler(context.docroot.toPath, context.config.server),
     new TemplateHandler(context.docroot.toPath, context.cache.toPath, context.config.mime,
       new TemplateEngine.Manager(serverConfig.template.updateCheckInterval,
         new XSLTEngine(), new SASSEngine(), new TypeScriptEngine())

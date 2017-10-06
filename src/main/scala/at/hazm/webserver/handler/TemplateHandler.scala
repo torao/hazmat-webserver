@@ -48,15 +48,15 @@ class TemplateHandler(docroot:Path, cacheDir:Path, mime:Cache[MimeType], manager
         } catch {
           case ex:FileNotFoundException =>
             logger.error(s"template file not found: requested file: $file", ex)
-            Some(getErrorResponse(Status.InternalServerError))
+            Some(getErrorResponse(request, Status.InternalServerError))
           case ex:Exception =>
             logger.error(s"template compile error: ${request.path} -> $file", ex)
-            Some(getErrorResponse(Status.InternalServerError))
+            Some(getErrorResponse(request, Status.InternalServerError))
         }
       }
     case None =>
       logger.debug(s"request uri cannot map to local file system: ${request.path}")
-      Some(getErrorResponse(Status.BadRequest))
+      Some(getErrorResponse(request, Status.BadRequest))
   }
 
 }

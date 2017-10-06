@@ -38,11 +38,11 @@ class ScriptHandler(docroot:Path, timeout:Long, exts:Seq[String]) extends Reques
           if (file.isFile) {
             exec(request, file).map(Some.apply)
           } else {
-            Future.successful(Some(getErrorResponse(Status.NotFound)))
+            Future.successful(Some(getErrorResponse(request, Status.NotFound)))
           }
         } else Future.successful(None)
       case None =>
-        Future.successful(Some(getErrorResponse(Status.BadRequest)))
+        Future.successful(Some(getErrorResponse(request, Status.BadRequest)))
     }
   }
 

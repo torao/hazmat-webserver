@@ -67,6 +67,31 @@ $ ./sbt "runMain at.hazm.webserver.Server $SERVER_HOME"
 
 テンプレート処理の対象外のファイルは通常の静的ファイルと同様に要求があればそのままクライアントへ送信されるだろう。
 
+## Configurations
+
+`$SERVER_HOME/conf/server.conf` を参照する。構文は Typesafe Config を使用できる。
+
+| NAME                           | DESCRIPTION  | DEFAULT |
+|:-------------------------------|:-------------|:------------|
+| server.request.timeout         | リクエストタイムアウト (秒) | 30 |
+| server.compression-level       | 圧縮レベル | 0 |
+| server.max-request-size        | リクエストの最大サイズ (B) | 500 |
+| server.bind-address            | バインドアドレス | localhost:80 |
+| server.send-buffer-size        | 送信バッファサイズ (B) | 4096 |
+| template.update-check-interval | ファイル更新確認間隔 (秒) | 2 |
+| script.timeout                 | スクリプト実行タイムアウト (ミリ秒) | 10000 |
+| script.extensions              | サーバサイドスクリプトとして実行するファイルの拡張子 | .xjs |
+| redirect: { (pattern: url)* }  | リダイレクト | |
+
+リダイレクト
+
+```javascript
+redirect: {
+  "/foo/(*)": "/bar/$1",  // 302 Temporary Moved
+  "/foo/(*)": "!/bar/$1", // 301 Permanently Moved
+}
+```
+
 ## Templates Processing
 
 テンプレート処理の対象かはファイルの拡張子で判断する。
@@ -82,10 +107,11 @@ XSL で変換されたファイルは元の XML や XSL が更新されない限
 
 ### Available Template Processing
 
-| Source | Depends        | Destination | Features      |
-|:-------|:---------------|:------------|:--------------|
-| *.xml  | *.xml, *.xsl   | *.html      | XInclude, XSL |
-| *.scss |                | *.css       | SCSS          |
+| Source         | Depends        | Destination | Features      |
+|:---------------|:---------------|:------------|:--------------|
+| *.xml, *.xhtml | *.xml, *.xsl   | *.html      | XInclude, XSL |
+| *.ts           |                | *.js        | TypeScript    |
+| *.scss, *.sass |                | *.css       | SCSS          |
 
 ### XSLT Processing
 
@@ -233,6 +259,20 @@ HazMat サーバのスクリプトエンジンは Node.js なんかじゃねえ�
 
 コンテキストはスクリプトファイルの実行ごとに隔離されているからスクリプト間で直接データの受け渡しすることはできない。
 外部スクリプトの読み込み、外部設定、DB やファイルアクセスなどは将来的に (俺の) 需要があれば実装するかもしれない。
+
+## Error Processing
+
+`$DOCROOT/error/500.html` のようなファイルが存在すればそのファイルを表示する。
+`$DOCROOT/error/error.xsl` が存在すればエラー状況を示す XML からレスポンスを動的に生成して返す事ができる。`error.xsl`
+が処理するのは以下の XML である。
+
+```xml
+<error>
+  <code>エラーコード</code>
+  <phrase>レスポンスフレーズ</phrase>
+  <message>エラーメッセージ</message>
+</error>
+```
 
 ## Docker
 

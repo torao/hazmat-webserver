@@ -33,7 +33,7 @@ class FileHandler(docroot:Path, sendBufferSize:Int, mime:Cache[MimeType]) extend
     case None =>
       // ローカルファイルシステム上のパスにマッピングできなければエラー
       logger.debug(s"request-uri cannot map to local file path: ${request.uri}")
-      getErrorResponse(Status.BadRequest)
+      getErrorResponse(request, Status.BadRequest)
   })
 
   protected def getResource(request:Request, realPath:File):Either[Response, Resource] = if (realPath.isFile) {
@@ -41,7 +41,7 @@ class FileHandler(docroot:Path, sendBufferSize:Int, mime:Cache[MimeType]) extend
       Right(LocalFile(realPath))
     } else {
       logger.debug(s"resource don't have read permission: $realPath")
-      Left(getErrorResponse(Status.Forbidden))
+      Left(getErrorResponse(request, Status.Forbidden))
     }
   } else if (realPath.isDirectory) {
     // ディレクトリが指定された場合はデフォルトHTMLにリダイレクト
@@ -49,13 +49,13 @@ class FileHandler(docroot:Path, sendBufferSize:Int, mime:Cache[MimeType]) extend
     val indexFile = "index.html"
     request.originalURL match {
       case Some(location) =>
-        Left(on(getErrorResponse(Status.Found)) { res =>
+        Left(on(getErrorResponse(request, Status.Found)) { res =>
           res.location = s"$location${if (location.endsWith("/")) "" else "/"}$indexFile"
           logger.debug(s"directory redirect to: ${res.location.getOrElse("???")}")
         })
       case None =>
         logger.debug(s"original request is not available: $request")
-        Left(getErrorResponse(Status.Forbidden))
+        Left(getErrorResponse(request, Status.Forbidden))
     }
   } else if (!docroot.toFile.exists()) {
     // docroot ディレクトリが存在しない場合はデフォルトのページを表示
@@ -66,11 +66,11 @@ class FileHandler(docroot:Path, sendBufferSize:Int, mime:Cache[MimeType]) extend
         Right(URLResource(url))
       case None =>
         logger.error(s"default resource not found on class-path: $path")
-        Left(getErrorResponse(Status.NotFound))
+        Left(getErrorResponse(request, Status.NotFound))
     }
   } else {
     logger.debug(s"file not found: $realPath")
-    Left(getErrorResponse(Status.NotFound))
+    Left(getErrorResponse(request, Status.NotFound))
   }
 }
 

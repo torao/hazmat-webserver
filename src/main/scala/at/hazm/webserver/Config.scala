@@ -3,12 +3,14 @@ package at.hazm.webserver
 import java.io.File
 import java.net.{InetSocketAddress, URI, URL}
 import java.nio.charset.StandardCharsets
+import java.util.regex.Pattern
 
 import com.twitter.util.StorageUnit
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{ConfigFactory, ConfigUtil}
 import org.slf4j.LoggerFactory
 
 import scala.util.{Failure, Success, Try}
+import scala.collection.JavaConverters._
 
 class Config(val source:URL, val config:com.typesafe.config.Config) {
   private[this] val logger = LoggerFactory.getLogger(getClass)
@@ -88,6 +90,12 @@ class Config(val source:URL, val config:com.typesafe.config.Config) {
     val timeout:Long = get("timeout", 10 * 1000L)
     val extensions:Seq[String] = getArray("extensions", ".xjs")
   }
+
+  val redirect:Seq[(Pattern,String)] = Try(config.getConfig("redirect")).toOption.map{ cs =>
+    cs.entrySet().asScala.map(x => x.getKey ).toSeq.map{ pattern =>
+      (Pattern.compile(ConfigUtil.splitPath(pattern).get(0)), cs.getString(pattern))
+    }
+  }.getOrElse(Seq.empty)
 
 }
 
