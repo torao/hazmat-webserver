@@ -15,6 +15,7 @@ import org.w3c.dom._
 
 import scala.annotation.tailrec
 import scala.util.Try
+import scala.xml.SAXParseException
 
 /**
   * ソースの URL から XInclude を解決し XSL を適用したドキュメントをロードします。これらは依存関係を参照するために JAXP の機能は使用せず
@@ -138,7 +139,11 @@ object XMLLoader {
     } catch {
       case ex:Throwable =>
         // コメントのエラーメッセージと fallback 内の要素を挿入
-        (include.getOwnerDocument.createComment(s" ERROR[$url] $ex ") :: getFallback(include).map { fallback =>
+        val msg = (ex match {
+          case e:SAXParseException => s"$url(${e.getLineNumber}:${e.getColumnNumber})"
+          case _ => s"$url"
+        }) + s": ${ex.getClass.getSimpleName}: ${ex.getMessage}"
+        (include.getOwnerDocument.createTextNode(msg) :: getFallback(include).map { fallback =>
           fallback.getChildNodes.toList
         }.getOrElse(List.empty)) -> Dependency()
     }

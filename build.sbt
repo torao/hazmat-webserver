@@ -18,6 +18,7 @@ libraryDependencies ++= Seq(
   "com.typesafe" % "config" % "1.3.+",
   "com.typesafe.play" % "play-json_2.12" % "2.6.0-M6",
   "com.vaadin" % "vaadin-sass-compiler" % "0.9.13",
+  "com.mangofactory" % "typescript4j" % "0.4.0",
   "org.slf4j"     % "slf4j-log4j12"  % "1.7.+"
 )
 
