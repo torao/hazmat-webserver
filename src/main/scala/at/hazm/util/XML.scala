@@ -1,5 +1,6 @@
 package at.hazm.util
 
+import java.io.StringWriter
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.transform.TransformerFactory
 import javax.xml.transform.dom.DOMSource
@@ -13,6 +14,8 @@ object XML {
   private[this] val transformerFactory = TransformerFactory.newInstance()
 
   implicit class _Elem(elem:Elem) {
+    def childs:List[Elem] = elem.child.collect{ case e:Elem => e }.toList
+
     def asScalaDocument:JDocument = {
       val doc = DocumentBuilderFactory.newInstance.newDocumentBuilder.newDocument()
       def build(node:Node, parent:JNode):Unit = {
@@ -31,6 +34,13 @@ object XML {
       }
       build(elem, doc)
       doc
+    }
+
+    def dump():String = {
+      val out = new StringWriter()
+      TransformerFactory.newInstance().newTransformer().transform(new DOMSource(elem.asScalaDocument), new StreamResult(out))
+      out.flush()
+      out.toString
     }
   }
 

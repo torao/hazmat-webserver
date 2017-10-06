@@ -39,6 +39,11 @@ class HazmatService(context:Context) extends TFService[Request, Response] {
     new FileHandler(context.docroot.toPath, serverConfig.server.sendBufferSize, context.config.mime)
   )
 
+  (asyncHandlers ++ handlers).foreach{ h =>
+    h.config_=(context.config.server)
+    h.errorTemplateEngine_=(new XSLTEngine())
+  }
+
   def apply(request:Request):Future[Response] = {
     val promise = Promise[Response]()
     SFuture.sequence(asyncHandlers.map(_.applyAsync(request))).map(_.flatten.headOption).map {

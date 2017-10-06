@@ -32,6 +32,12 @@ class Config(val source:URL, val config:com.typesafe.config.Config) {
     }
   }
 
+  private[this] def getMap(key:String):Map[String,String] = Try(config.getConfig(key)).toOption.map{ cs =>
+    cs.entrySet().asScala.map(x => x.getKey ).toSeq.map{ name =>
+      (ConfigUtil.splitPath(name).get(0), cs.getString(name))
+    }.toMap
+  }.getOrElse(Map.empty)
+
   private[this] def resolve(path:String):File = {
     (if (source.getProtocol == "file") {
       new File(source.toURI).getParentFile
@@ -91,11 +97,19 @@ class Config(val source:URL, val config:com.typesafe.config.Config) {
     val extensions:Seq[String] = getArray("extensions", ".xjs")
   }
 
-  val redirect:Seq[(Pattern,String)] = Try(config.getConfig("redirect")).toOption.map{ cs =>
-    cs.entrySet().asScala.map(x => x.getKey ).toSeq.map{ pattern =>
-      (Pattern.compile(ConfigUtil.splitPath(pattern).get(0)), cs.getString(pattern))
-    }
-  }.getOrElse(Seq.empty)
+  /**
+    * リダイレクト URI のパターンとそのリダイレクト先。
+    */
+  val redirect:Seq[(Pattern,String)] = getMap("redirect").toSeq.map{ case (pattern, url) =>
+    (Pattern.compile(pattern), url)
+  }
+
+  /**
+    * エラーの発生したパスと対応するテンプレート (XSL ファイル)。
+    */
+  val error:Seq[(Pattern,String)] = getMap("error").toSeq.map{ case (pattern, path) =>
+    (Pattern.compile(pattern), path)
+  }
 
 }
 

@@ -30,13 +30,7 @@ class TemplateHandler(docroot:Path, cacheDir:Path, mime:Cache[MimeType], manager
         val cache = FileHandler.mapLocalFile(cacheDir, request.uri).get
         try {
           val force = request.headerMap.get("Cache-Control").orElse(request.headerMap.get("Pragma")).contains("no-cache")
-          manager.transform(file, cache, Map(
-            "method" -> request.method.name,
-            "uri" -> request.uri,
-            "path" -> request.path,
-            "host" -> request.requestedHost.getOrElse("localhost"),
-            "scheme" -> request.requestedProto
-          ), force).flatMap { lastModified =>
+          manager.transform(file, cache, TemplateHandler.makeParameters(request), force).flatMap { lastModified =>
             FileHandler.ifModifiedSince(request, lastModified).orElse {
               Some(on(Response(Version.Http11, Status.Ok, Reader.fromFile(cache))) { res =>
                 res.headerMap.add("Last-Modified", new Date(lastModified))
@@ -59,4 +53,14 @@ class TemplateHandler(docroot:Path, cacheDir:Path, mime:Cache[MimeType], manager
       Some(getErrorResponse(request, Status.BadRequest))
   }
 
+}
+
+object TemplateHandler {
+  def makeParameters(request:Request):Map[String,String] = Map(
+    "method" -> request.method.name,
+    "uri" -> request.uri,
+    "path" -> request.path,
+    "host" -> request.requestedHost.getOrElse("localhost"),
+    "scheme" -> request.requestedProto
+  )
 }
