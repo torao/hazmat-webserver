@@ -49,7 +49,7 @@ abstract class RequestHandler(docroot:Path) {
     val reader = _config.get.error.find(_._1.matcher(request.path).matches()) match {
       case Some((_, path)) =>
         val xsl = FileHandler.mapLocalFile(docroot, path).get
-        transform(request, error, xsl)
+        transform(request, error, xsl, status.code)
       case None =>
         val dir = new File(docroot.toFile, "error")
         val file = new File(dir, s"${status.code}.html")
@@ -57,7 +57,7 @@ abstract class RequestHandler(docroot:Path) {
         if(file.isFile) {
           Reader.fromFile(file)
         } else if(xsl.isFile) {
-          transform(request, error, xsl)
+          transform(request, error, xsl, status.code)
         } else {
           transformDefault(request, error)
         }
@@ -76,14 +76,15 @@ abstract class RequestHandler(docroot:Path) {
     * @param xsl     ローカルファイルシステム上の XSL テンプレート
     * @return レスポンス内容
     */
-  private[this] def transform(request:Request, xml:Document, xsl:File):Reader = {
+  private[this] def transform(request:Request, xml:Document, xsl:File, code:Int):Reader = {
 
-    // XSLT 指定を追加
+    // XSLT 指定を追加 (キャッシュを破壊しないようにクローンを生成)
     val doc = xml.cloneNode(true).asInstanceOf[Document]
     doc.insertBefore(
       doc.createProcessingInstruction("xml-stylesheet", " href=\"" + xsl.toURI + "\""),
       doc.getDocumentElement
     )
+    doc.getDocumentElement.setAttribute("data-response-code", code.toString)
 
     // ストリーム処理のためにエラー情報を一度シリアライズ
     val errorMessage = {

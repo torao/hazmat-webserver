@@ -26,7 +26,7 @@ object TemplateEngine {
     var dependency:Option[Dependency] = None
   }
 
-  class Manager(interval:Long, engines:TemplateEngine*) {
+  class Manager(docroot:File, interval:Long, engines:TemplateEngine*) {
 
     /** テンプレート適用のメタ情報をメモリ上に保持するためのマップ。 */
     private[this] val meta = new ConcurrentHashMap[File, MetaInfo]()
@@ -57,7 +57,9 @@ object TemplateEngine {
             val tm = System.currentTimeMillis() - start
             if(logger.isDebugEnabled) {
               val prefix = specified.getParentFile.toURI
-              val items = dependency.urls.map(_.toURI).map(i => prefix.relativize(i))
+              val items = dependency.urls.map(_.toURI).map(i => prefix.relativize(i)).map{ i =>
+                if(i.isAbsolute) "/" + docroot.toURI.relativize(i) else i
+              }
               logger.debug(f"compiled: [${items.mkString(", ")}%s] -> ${cache.getName} ($tm%,dms)")
             }
             info.dependency = Some(dependency)

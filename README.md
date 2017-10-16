@@ -81,14 +81,22 @@ $ ./sbt "runMain at.hazm.webserver.Server $SERVER_HOME"
 | template.update-check-interval | ファイル更新確認間隔 (秒) | 2 |
 | script.timeout                 | スクリプト実行タイムアウト (ミリ秒) | 10000 |
 | script.extensions              | サーバサイドスクリプトとして実行するファイルの拡張子 | .xjs |
-| redirect: { (pattern: url)* }  | リダイレクト | |
+| redirect: { (regex: url)* }    | リダイレクト | |
+| error: { (regex: path)* }      | エラーページ | |
 
 リダイレクト
 
 ```javascript
 redirect: {
-  "/foo/(*)": "/bar/$1",  // 302 Temporary Moved
-  "/foo/(*)": "!/bar/$1", // 301 Permanently Moved
+  "/foo/(.*)": "/bar/$1",  // 302 Temporary Moved
+  "/foo/(.*)": "!/bar/$1", // 301 Permanently Moved
+}
+```
+
+エラーページ
+```javascript
+error: {
+  "/foo/.*": "/bar.xsl"
 }
 ```
 
