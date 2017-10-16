@@ -81,6 +81,8 @@ $ ./sbt "runMain at.hazm.webserver.Server $SERVER_HOME"
 | template.update-check-interval | ファイル更新確認間隔 (秒) | 2 |
 | script.timeout                 | スクリプト実行タイムアウト (ミリ秒) | 10000 |
 | script.extensions              | サーバサイドスクリプトとして実行するファイルの拡張子 | .xjs |
+| script.extensions-java         | サーバサイド Java として実行するファイルの拡張子 | .java |
+| script.libs                    | 外部ライブラリ(複数指定可) | "" |
 | redirect: { (regex: url)* }    | リダイレクト | |
 | error: { (regex: path)* }      | エラーページ | |
 
@@ -99,6 +101,8 @@ error: {
   "/foo/.*": "/bar.xsl"
 }
 ```
+
+外部ライブラリの読み込みはディレクトリ内のサブディレクトリを捜査しすべての `*.jar` を参照する。
 
 ## Templates Processing
 
@@ -228,8 +232,10 @@ application/json 形式の POST リクエストはさらに強力だ。
 スクリプトファイルの評価結果がそのまま JSON としてクライアントに送信される。
 即時実行関数のスタイルで記述したなら最後の `return` で返したデータがレスポンスとして送信されると思えばいい。
 JSON として有効なデータであれば説明するまでもなくうまく動くが、そうでない場合は若干の訂正を行っている。
-レスポンスに紛れ込んだ `undefined` と `NaN` は `null` に置き換えているし、`function` や `Date` などのオブジェクトが混じっていた
-場合は意図した JSON にはならないかもしれないが、いずれも悪いのはオメーだ。
+例えば単体の文字列や数値 `"string"` は JSON で定義されていないため要素数1の配列 `["string"]` に変換されるし、
+レスポンスに紛れ込んだ `undefined` と `NaN` は `null` に置き換えている。
+`function` や `Date` などのオブジェクトが混じっていた場合は意図した JSON にはならないかもしれないが、いずれも
+それらは対応しておらず悪いのはオメーだ。
 
 #### Error Response
 
@@ -267,6 +273,33 @@ HazMat サーバのスクリプトエンジンは Node.js なんかじゃねえ�
 
 コンテキストはスクリプトファイルの実行ごとに隔離されているからスクリプト間で直接データの受け渡しすることはできない。
 外部スクリプトの読み込み、外部設定、DB やファイルアクセスなどは将来的に (俺の) 需要があれば実装するかもしれない。
+
+### External Libraries
+
+JavaScript の実行に外部ライブラリ (JAR) が必要であれば sbt を使うことができる。
+
+まず以下のような `build.sbt` を作成する。
+
+```scala
+organization := "at.hazm"
+
+name := "hazmat-contents"
+
+version := "1.0"
+
+scalaVersion := "2.12.3"
+
+resolvers += "CodeLibs Repository" at "http://maven.codelibs.org/"
+
+libraryDependencies += "org.codelibs" % "elasticsearch-analysis-kuromoji-neologd" % "5.+"
+
+retrieveManaged := true
+```
+
+`libraryDependencies` に必要なライブラリの Maven を指定し、`sbt package` を実行すれば `lib_managed` 以下に
+ライブラリが保存される。
+
+次に設定ファイルの `script.libs` に `lib/:lib_managed/` のように JAR が保存されたディレクトリを追加する。
 
 ## Error Processing
 

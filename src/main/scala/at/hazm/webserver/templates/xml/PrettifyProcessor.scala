@@ -12,14 +12,14 @@ class PrettifyProcessor extends DocumentProcessor {
   /**
     * 内容を変更してはいけない要素 (小文字)。
     */
-  private[this] val ShouldIgnore = Set("pre", "script", "style")
+  private[this] val ShouldIgnore = Set("pre", "script", "style", "textarea")
 
   /**
     * ブロック (コンテナ) 型の要素 (小文字)。
     */
   private[this] val Container = Set(
     "html", "head", "body", "nav", "footer", "div", "ul", "ol", "dl", "dd", "table", "tr", "thead", "tbody", "tfoot",
-  "form", "blockquote")
+  "form", "blockquote", "select")
 
   override def process(doc:Document, location:URL):Dependency = {
     // doc.getDocumentElement.setAttribute("xmlns", "http://www.w3.org/1999/xhtml")

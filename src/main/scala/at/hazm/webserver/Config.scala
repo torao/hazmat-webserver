@@ -1,7 +1,7 @@
 package at.hazm.webserver
 
 import java.io.File
-import java.net.{InetSocketAddress, URI, URL}
+import java.net.{InetSocketAddress, URI, URL, URLClassLoader}
 import java.nio.charset.StandardCharsets
 import java.util.regex.Pattern
 
@@ -9,8 +9,8 @@ import com.twitter.util.StorageUnit
 import com.typesafe.config.{ConfigFactory, ConfigUtil}
 import org.slf4j.LoggerFactory
 
-import scala.util.{Failure, Success, Try}
 import scala.collection.JavaConverters._
+import scala.util.{Failure, Success, Try}
 
 class Config(val source:URL, val config:com.typesafe.config.Config) {
   private[this] val logger = LoggerFactory.getLogger(getClass)
@@ -32,14 +32,14 @@ class Config(val source:URL, val config:com.typesafe.config.Config) {
     }
   }
 
-  private[this] def getMap(key:String):Map[String,String] = Try(config.getConfig(key)).toOption.map{ cs =>
-    cs.entrySet().asScala.map(x => x.getKey ).toSeq.map{ name =>
+  private[this] def getMap(key:String):Map[String, String] = Try(config.getConfig(key)).toOption.map { cs =>
+    cs.entrySet().asScala.map(x => x.getKey).toSeq.map { name =>
       (ConfigUtil.splitPath(name).get(0), cs.getString(name))
     }.toMap
   }.getOrElse(Map.empty)
 
   private[this] def resolve(path:String):File = {
-    (if (source.getProtocol == "file") {
+    (if(source.getProtocol == "file") {
       new File(source.toURI).getParentFile
     } else new File(".")).getAbsoluteFile.toPath.resolve(path).toFile
   }
@@ -89,25 +89,49 @@ class Config(val source:URL, val config:com.typesafe.config.Config) {
 
   object script {
     private[this] def get[T](key:String, default:T)(implicit converter:(String) => Either[String, T]):T = _get[T](s"script.$key", default)(converter)
+
     private[this] def getArray[T](key:String, default:String)(implicit converter:(String) => Either[String, T]):Seq[T] = {
-      get(key, default).split(",").filter(_.nonEmpty).map(converter).collect{ case Right(value) => value }
+      get(key, default).split(",").filter(_.nonEmpty).map(converter).collect { case Right(value) => value }
     }
 
     val timeout:Long = get("timeout", 10 * 1000L)
     val extensions:Seq[String] = getArray("extensions", ".xjs")
+
+    val javaExtensions:Seq[String] = getArray("extensions-java", ".java")
+
+    def libs(root:File):ClassLoader = {
+      val urls = get("libs", "").split(File.pathSeparatorChar).filter(_.nonEmpty).map { d =>
+        val dir = new File(d)
+        if(dir.isAbsolute) dir else new File(root, d)
+      }.flatMap { base =>
+        def findJars(dir:File):Seq[URL] = {
+          dir.listFiles().filter(f => f.isFile && f.getName.endsWith(".jar")).map { file =>
+            logger.debug(s"add script library: ${base.getName}/${base.toURI.relativize(file.toURI)}")
+            file.toURI.toURL
+          } ++ dir.listFiles().filter(_.isDirectory).flatMap(findJars)
+        }
+
+        if(base.isDirectory) findJars(base) else {
+          logger.warn(s"script library directory is not exist: ${base.getAbsolutePath}")
+          Seq.empty
+        }
+      }
+      val defaultLoader = Thread.currentThread().getContextClassLoader
+      if(urls.isEmpty) defaultLoader else new URLClassLoader(urls, defaultLoader)
+    }
   }
 
   /**
     * リダイレクト URI のパターンとそのリダイレクト先。
     */
-  val redirect:Seq[(Pattern,String)] = getMap("redirect").toSeq.map{ case (pattern, url) =>
+  val redirect:Seq[(Pattern, String)] = getMap("redirect").toSeq.map { case (pattern, url) =>
     (Pattern.compile(pattern), url)
   }
 
   /**
     * エラーの発生したパスと対応するテンプレート (XSL ファイル)。
     */
-  val error:Seq[(Pattern,String)] = getMap("error").toSeq.map{ case (pattern, path) =>
+  val error:Seq[(Pattern, String)] = getMap("error").toSeq.map { case (pattern, path) =>
     (Pattern.compile(pattern), path)
   }
 

@@ -11,7 +11,8 @@ object DocumentWriter {
   /**
     * 内容が空であったとしても終タグを記述する要素名 (すべて小文字)。
     */
-  val KeepEndElementIfEmpty:Set[String] = Set("div", "script", "iframe", "pre", "canvas", "div", "span")
+  val KeepEndElementIfEmpty:Set[String] = Set("div", "script", "iframe", "pre", "canvas", "div", "span", "textarea",
+    "a", "b", "p", "i")
 
   /**
     * 内容のテキストをエスケープしない。

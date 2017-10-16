@@ -5,7 +5,7 @@ import java.util.Date
 import java.util.concurrent.Executors
 
 import at.hazm.on
-import at.hazm.webserver.handler.{FileHandler, RedirectHandler, ScriptHandler, TemplateHandler}
+import at.hazm.webserver.handler._
 import at.hazm.webserver.templates.{SASSEngine, TypeScriptEngine, XSLTEngine}
 import com.twitter.finagle.http._
 import com.twitter.finagle.{Service => TFService}
@@ -26,7 +26,8 @@ class HazmatService(context:Context) extends TFService[Request, Response] {
 
   /** 非同期で実行するリクエストハンドラ */
   private[this] val asyncHandlers = Seq(
-    new ScriptHandler(context.docroot.toPath, serverConfig.script.timeout, serverConfig.script.extensions)
+    new JavaHandler(context.docroot.toPath, serverConfig.script.timeout, serverConfig.script.javaExtensions, serverConfig.script.libs(context.dir)),
+    new ScriptHandler(context.docroot.toPath, serverConfig.script.timeout, serverConfig.script.extensions, serverConfig.script.libs(context.dir))
   )
 
   /** 同期で実行するリクエストハンドラ。 */
