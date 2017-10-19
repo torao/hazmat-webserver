@@ -26,6 +26,8 @@ object XMLLoader {
 
   val URI_XINCLUDE = "http://www.w3.org/2001/XInclude"
 
+  val URI_XML_STYLESHEET = "http://www.w3.org/1999/XSL/Transform"
+
   /**
     * 指定された URL からプレーンテキストを読み出します。
     *
@@ -92,10 +94,10 @@ object XMLLoader {
     }.reduceLeftOption(_ + _).getOrElse(Dependency())
 
     // ドキュメント内からすべての xmlns:xi 宣言を削除
-    doc.foreach{ elem =>
+    doc.foreach { elem =>
       val attrs = elem.getAttributes
-      (for(i <- 0 until attrs.getLength) yield attrs.item(i)).collect{ case a:Attr => a }.toList.foreach { a =>
-        if((a.getPrefix == "xmlns" || a.getName == "xmlns" || a.getName.startsWith("xmlns:")) && a.getValue == URI_XINCLUDE){
+      (for(i <- 0 until attrs.getLength) yield attrs.item(i)).collect { case a:Attr => a }.toList.foreach { a =>
+        if((a.getPrefix == "xmlns" || a.getName == "xmlns" || a.getName.startsWith("xmlns:")) && a.getValue == URI_XINCLUDE) {
           elem.removeAttributeNode(a)
         }
       }
@@ -169,27 +171,38 @@ object XMLLoader {
     * @param param    テンプレート用のパラメータ
     */
   private[this] def resolveStylesheet(doc:Document, location:URL, param:Map[String, String]):(Document, Dependency) = {
-    getStyleSheet(doc) match {
-      case Some(uri) =>
-        val url = if(uri.isAbsolute) uri.toURL else location.toURI.resolve(uri).toURL
-        val (stylesheet, deps) = load(url, param)
+    getStyleSheet(doc).map { uri =>
+      val url = if(uri.isAbsolute) uri.toURL else location.toURI.resolve(uri).toURL
+      val (stylesheet, deps) = load(url, param)
 
-        val factory = TransformerFactory.newInstance()
-        val style = new DOMSource(stylesheet)
-        // val style = new StreamSource(url.toString)
-        val transformer = factory.newTransformer(style)
-        param.foreach { case (key, value) =>
-          transformer.setParameter(key, value)
-        }
+      // <xsl:include>, <xsl:import> の依存関係を追跡
+      val xslHREFs = getXslIncluded(stylesheet.getDocumentElement).map(_.getAttribute("href")).map(u => url.toURI.resolve(u).toURL)
 
-        val src = new DOMSource(doc)
-        val out = new DOMResult()
-        transformer.transform(src, out)
-        val result = out.getNode.asInstanceOf[Document]
-        (result, Dependency(location, url) + deps)
-      case None => (doc, Dependency())
-    }
+      val factory = TransformerFactory.newInstance()
+      val style = new DOMSource(stylesheet)
+      style.setSystemId(url.toString) // xsl:include, xsl:import の基準となる URL
+    val transformer = factory.newTransformer(style)
+      param.foreach { case (key, value) =>
+        transformer.setParameter(key, value)
+      }
+
+      val src = new DOMSource(doc)
+      val out = new DOMResult()
+      transformer.transform(src, out)
+      val result = out.getNode.asInstanceOf[Document]
+      (result, Dependency(location, url) + deps + Dependency(xslHREFs:_*))
+    }.getOrElse((doc, Dependency()))
   }
+
+  /**
+    * 指定された要素以下をトラバースして &lt;xsl:include&gt;, &lt;xxsl:import&gt; 要素を参照する。
+    *
+    * @param elem &lt;xi:include&gt; 要素を参照する要素
+    * @return 検出した &lt;xi:include&gt; 要素
+    */
+  private[this] def getXslIncluded(elem:Element):Seq[Element] = getElements({ e =>
+    e.getNamespaceURI == URI_XML_STYLESHEET && (e.getLocalName == "include" || e.getLocalName == "import")
+  }, elem)
 
   /**
     * 指定された要素以下をトラバースして &lt;xi:include&gt; 要素を参照する。
@@ -215,12 +228,22 @@ object XMLLoader {
     * @param elem 条件に一致した要素
     * @return 検出した &lt;xi:include&gt; 要素
     */
-  private[this] def getXInclude(eval:(Element) => Boolean, elem:Element):Seq[Element] = {
+  private[this] def getXInclude(eval:(Element) => Boolean, elem:Element):Seq[Element] = getElements({ e =>
+    e.getNamespaceURI == URI_XINCLUDE && eval(e)
+  }, elem)
+
+  /**
+    * 指定された要素以下をトラバースして条件に一致する要素を参照する。階層構造の上位要素、同一階層であれば先に現れた要素から順に並んだ構造
+    * となる。
+    *
+    * @param eval 条件
+    * @param elem 条件に一致した要素
+    * @return 検出した要素
+    */
+  private[this] def getElements(eval:(Element) => Boolean, elem:Element):Seq[Element] = {
     val items = elem.getChildNodes
     val elems = (for(i <- 0 until items.getLength) yield items.item(i)).collect { case e:Element => e }
-    elems.filter { e =>
-      e.getNamespaceURI == URI_XINCLUDE && eval(e)
-    } ++ elems.flatMap(e => getXInclude(eval, e))
+    elems.filter(eval) ++ elems.flatMap(e => getElements(eval, e))
   }
 
   private[this] val HREF = ".*href\\s*=\\s*[\"\'](.*?)[\"\'].*".r
