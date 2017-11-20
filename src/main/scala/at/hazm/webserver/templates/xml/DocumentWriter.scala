@@ -9,10 +9,9 @@ import org.w3c.dom._
 object DocumentWriter {
 
   /**
-    * 内容が空であったとしても終タグを記述する要素名 (すべて小文字)。
+    * 内容が空の場合に終タグを記述せず Empty-Element Tags で記述する要素 (全て小文字)。
     */
-  val KeepEndElementIfEmpty:Set[String] = Set("div", "script", "iframe", "pre", "canvas", "div", "span", "textarea",
-    "a", "b", "p", "i")
+  val EmptyElements:Set[String] = Set("br", "hr", "input", "meta", "link", "img", "param", "base")
 
   /**
     * 内容のテキストをエスケープしない。
@@ -43,7 +42,7 @@ object DocumentWriter {
         case t:Text => t.getData.nonEmpty
         case _ => true
       }
-      if(cs.nonEmpty || KeepEndElementIfEmpty.contains(e.getTagName.toLowerCase)) {
+      if(cs.nonEmpty || ! EmptyElements.contains(e.getTagName.toLowerCase)) {
         out.write('>')
         cs.foreach { c => write(out, c, noescape || ContentWithoutEscape.contains(e.getTagName.toLowerCase)) }
         out.write("</")

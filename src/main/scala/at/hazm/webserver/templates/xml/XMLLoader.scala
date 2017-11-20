@@ -44,7 +44,7 @@ object XMLLoader {
     def _read():String = {
       val len = in.read(buffer)
       if(len < 0) text.toString() else {
-        text.appendAll(buffer)
+        text.appendAll(buffer, 0, len)
         _read()
       }
     }
