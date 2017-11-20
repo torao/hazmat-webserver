@@ -6,7 +6,7 @@ import java.util.concurrent.Executors
 
 import at.hazm.on
 import at.hazm.webserver.handler._
-import at.hazm.webserver.templates.{SASSEngine, TypeScriptEngine, XSLTEngine}
+import at.hazm.webserver.templates.{SASSEngine, SVGEngine, TypeScriptEngine, XSLTEngine}
 import com.twitter.finagle.http._
 import com.twitter.finagle.{Service => TFService}
 import com.twitter.io.{Bufs, Reader}
@@ -35,7 +35,7 @@ class HazmatService(context:Context) extends TFService[Request, Response] {
     new RedirectHandler(context.docroot.toPath, context.config.server),
     new TemplateHandler(context.docroot.toPath, context.cache.toPath, context.config.mime,
       new TemplateEngine.Manager(context.docroot, serverConfig.template.updateCheckInterval,
-        new XSLTEngine(), new SASSEngine(), new TypeScriptEngine())
+        new XSLTEngine(), new SASSEngine(), new TypeScriptEngine(), new SVGEngine())
     ),
     new FileHandler(context.docroot.toPath, serverConfig.server.sendBufferSize, context.config.mime)
   )
