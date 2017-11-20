@@ -11,7 +11,7 @@ object DocumentWriter {
   /**
     * 内容が空の場合に終タグを記述せず Empty-Element Tags で記述する要素 (全て小文字)。
     */
-  val EmptyElements:Set[String] = Set("br", "hr", "input", "meta", "link", "img", "param", "base")
+  val EmptyElements:Set[String] = Set("area", "br", "col", "embed", "hr", "input", "meta", "link", "img", "param", "base", "source", "track", "wbr")
 
   /**
     * 内容のテキストをエスケープしない。
