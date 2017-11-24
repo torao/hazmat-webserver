@@ -112,11 +112,10 @@ abstract class ProcessHandler[T](docroot:Path, timeout:Long, exts:Seq[String], v
   }
 
   /**
-    * JavaScript 処理からの返値を JSON オブジェクトに変換する。
+    * JavaScript 処理からの返値を JSON オブジェクトに変換する。value に循環参照が含まれている場合は StackOverflowError が発生する。
     *
     * @param value 変換する値
     * @return JSON オブジェクト
-    * @throws StackOverflowError 返値に循環参照が含まれている場合
     */
   protected def toJSON(value:AnyRef):JsValue = value match {
     case null => JsNull

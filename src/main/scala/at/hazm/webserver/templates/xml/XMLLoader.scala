@@ -1,17 +1,19 @@
 package at.hazm.webserver.templates.xml
 
-import java.io.{InputStream, InputStreamReader}
+import java.io.{InputStream, InputStreamReader, StringReader, StringWriter}
 import java.net.{URI, URL}
 import java.nio.charset.{Charset, StandardCharsets}
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.transform.TransformerFactory
 import javax.xml.transform.dom.{DOMResult, DOMSource}
+import javax.xml.transform.stream.StreamResult
 import javax.xml.xpath.{XPathConstants, XPathFactory}
 
 import at.hazm.using
 import at.hazm.webserver.Dependency
 import org.slf4j.LoggerFactory
 import org.w3c.dom._
+import org.xml.sax.InputSource
 
 import scala.annotation.tailrec
 import scala.util.Try
@@ -127,12 +129,33 @@ object XMLLoader {
       val href = href2url(include)
       val parse = include.getAttribute("parse")
       if(parse == "xml" || parse.isEmpty) {
-        // 再帰的に XML の挿入
-        val (dom, deps) = load(href, param)
-        if(include.hasAttribute("xpath")) { // NOTE: 本当は xpointer を使うが Java で実装されていないため
-          val nl = xpath.evaluate(include.getAttribute("xpath"), dom, XPathConstants.NODESET).asInstanceOf[NodeList]
-          (nl.toList, deps)
-        } else (List(dom.getDocumentElement), deps)
+        if(include.hasAttribute("xpointer")) {
+          // xpointer の有効な実装が存在しないため XInclude の要素のみを解釈させ要素を取得する
+          val xincludeXML = {
+            val out = new StringWriter()
+            val src = new DOMSource(include)
+            val dst = new StreamResult(out)
+            TransformerFactory.newInstance().newTransformer().transform(src, dst)
+            out.toString
+          }
+          val elem = {
+            val factory = DocumentBuilderFactory.newInstance()
+            factory.setXIncludeAware(true)
+            factory.setNamespaceAware(true)
+            val builder = factory.newDocumentBuilder()
+            val is = new InputSource(new StringReader(xincludeXML))
+            is.setSystemId(url.toString)
+            builder.parse(is).getDocumentElement
+          }
+          (List(elem), Dependency(url, href))
+        } else {
+          // 再帰的に XML の挿入
+          val (dom, deps) = load(href, param)
+          if(include.hasAttribute("xpath")) { // NOTE: 本当は xpointer を使うが Java で実装されていないため
+            val nl = xpath.evaluate(include.getAttribute("xpath"), dom, XPathConstants.NODESET).asInstanceOf[NodeList]
+            (nl.toList, deps)
+          } else (List(dom.getDocumentElement), deps)
+        }
       } else {
         // 単純なテキスト挿入
         val charset = if(include.hasAttribute("encoding")) Charset.forName(include.getAttribute("encoding")) else StandardCharsets.UTF_8
