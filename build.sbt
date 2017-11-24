@@ -19,7 +19,8 @@ libraryDependencies ++= Seq(
   "com.typesafe.play" % "play-json_2.12" % "2.6.0-M6",
   "com.vaadin" % "vaadin-sass-compiler" % "0.9.13",
   "com.mangofactory" % "typescript4j" % "0.4.0",
-  "org.codehaus.janino" % "janino" % "3.+",             // Dynamic Java Compiler
+  "org.codehaus.janino" % "janino" % "3.+",                 // Dynamic Java Compiler
+  "org.apache.xmlgraphics" % "batik-transcoder" % "1.9.1",  // transform SVG to PNG
   "org.slf4j"     % "slf4j-log4j12"  % "1.7.+"
 )
 
