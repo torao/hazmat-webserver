@@ -124,6 +124,7 @@ XSL で変換されたファイルは元の XML や XSL が更新されない限
 | *.xml, *.xhtml | *.xml, *.xsl   | *.html      | XInclude, XSL |
 | *.ts           |                | *.js        | TypeScript    |
 | *.scss, *.sass |                | *.css       | SCSS          |
+| *.svg, *.svgz  |                | *.png       | SVG           |
 
 ### XSLT Processing
 
@@ -182,6 +183,29 @@ _filename_.html にリクエストしたケースを考える。もし docroot �
 
 XSL テンプレートには `method`, `host`, `uri`, `path` がパラメータとして渡される。ただしこれらのパラメータを使用して HTML を作成した
 場合、リクエスト事にその値が変化してもキャッシュが再構築されないことに注意。
+
+### DOM Scripting
+
+*.xml または *.xhtml ファイルに対する XSL テンプレートの適用が終わった後の DOM に対して JavaScript を用いて DOM の操作を
+行うことができます。これは XSL のみの機能では難しいコンテンツ生成を行うための機能です。例えば下位ディレクトリの全ての
+ページのインデックスを作成する事ができます。
+
+`$SERVER_HOME/scripts` に保存されている *.js ファイルが使用されます。複数の JS ファイルが存在する場合はファイル名のソート
+順に適用されます。
+
+| 変数名 | 型 | 意味 |
+|:-------|:---|:-----|
+| doc      | org.w3c.dom.Document | 操作するドキュメント |
+| location | java.lang.String | ドキュメントのURL    |
+| context  | Context | ヘルパー関数 |
+
+ヘルパー関数
+
+| 変数名 | 型 | 意味 |
+|:-------|:---|:-----|
+| findElements(node:(Document or Element), namespace:String, localName:String):Array[Element] |
+| loadXML(url:String):Document |
+| getString(node:Node, xpath:String):String |
 
 ## Scripts Processing
 

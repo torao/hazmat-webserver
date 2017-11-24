@@ -19,7 +19,7 @@ class PrettifyProcessor extends DocumentProcessor {
     */
   private[this] val Container = Set(
     "html", "head", "body", "nav", "footer", "div", "ul", "ol", "dl", "dd", "table", "tr", "thead", "tbody", "tfoot",
-  "form", "blockquote", "select")
+    "form", "blockquote", "select")
 
   override def process(doc:Document, location:URL):Dependency = {
     // doc.getDocumentElement.setAttribute("xmlns", "http://www.w3.org/1999/xhtml")
@@ -37,6 +37,7 @@ class PrettifyProcessor extends DocumentProcessor {
         _removePrevSpace(node)
       case _ => ()
     }
+
     // ノードの後方空白を削除
     def _removePostSpace(node:Node):Unit = Option(node.getNextSibling) match {
       case Some(next:Text) if next.getData.trim.isEmpty =>
@@ -48,20 +49,21 @@ class PrettifyProcessor extends DocumentProcessor {
     // コンテナ型要素であれば子のノードを縦に並べるインデントを追加
     if(Container.contains(elem.getTagName.toLowerCase)) {
       val doc = elem.getOwnerDocument
-      elem.getChildNodes.toList.foreach{ c =>
-        if(elem.getChildNodes.toList.contains(c)){
-           _removePrevSpace(c)
-           _removePostSpace(c)
-          elem.insertBefore(doc.createTextNode("\n" + "  " * (i+1)), c)
+      elem.getChildNodes.toList.foreach { c =>
+        if(elem.getChildNodes.toList.contains(c)) {
+          _removePrevSpace(c)
+          _removePostSpace(c)
+          elem.insertBefore(doc.createTextNode("\n" + "  " * (i + 1)), c)
         }
       }
-      if(elem.getChildNodes.getLength > 0){
+      if(elem.getChildNodes.getLength > 0) {
         elem.appendChild(doc.createTextNode("\n" + "  " * i))
       }
     }
 
     // 再帰的に実行
-    if(!ShouldIgnore.contains(elem.getLocalName.toLowerCase)) {
+    // ※ JS による DOM 操作で NS 指定版を使わないと local-name が null になるがあるがそれは補助したい
+    if(!ShouldIgnore.contains(Option(elem.getLocalName).getOrElse(elem.getTagName).toLowerCase)) {
       elem.getChildNodes.toList.collect { case e:Element => e }.foreach(e => setIndent(e, i + 1))
     }
   }
