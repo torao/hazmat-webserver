@@ -94,6 +94,10 @@ object ScriptProcessor {
       this.xpath.evaluate(xpath, node, XPathConstants.STRING).asInstanceOf[String]
     }
 
+    def getBoolean(node:Node, xpath:String):Boolean = {
+      this.xpath.evaluate(xpath, node, XPathConstants.BOOLEAN).asInstanceOf[Boolean]
+    }
+
     private[this] def _find(buf:mutable.Buffer[Element], elem:Element, ns:String, prefix:Seq[String], name:String):Unit = {
       val attrs = elem.getAttributes
       val currentPrefixes = (for(i <- 0 until attrs.getLength) yield attrs.item(i)).map(a => (a.getNodeName, a.getNodeValue)).collect {
