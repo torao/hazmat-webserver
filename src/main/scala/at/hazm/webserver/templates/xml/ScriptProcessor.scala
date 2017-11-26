@@ -10,7 +10,7 @@ import at.hazm.using
 import at.hazm.webserver.Dependency
 import jdk.nashorn.api.scripting.ScriptObjectMirror
 import org.slf4j.LoggerFactory
-import org.w3c.dom.{Document, Element, Node}
+import org.w3c.dom.{Document, Element, Node, NodeList}
 
 import scala.collection.mutable
 
@@ -96,6 +96,11 @@ object ScriptProcessor {
 
     def getBoolean(node:Node, xpath:String):Boolean = {
       this.xpath.evaluate(xpath, node, XPathConstants.BOOLEAN).asInstanceOf[Boolean]
+    }
+
+    def getStrings(node:Node, xpath:String):Array[String] = {
+      val nl = this.xpath.evaluate(xpath, node, XPathConstants.NODESET).asInstanceOf[NodeList]
+      (for(i <- 0 until nl.getLength) yield nl.item(i).getTextContent).toArray
     }
 
     private[this] def _find(buf:mutable.Buffer[Element], elem:Element, ns:String, prefix:Seq[String], name:String):Unit = {
