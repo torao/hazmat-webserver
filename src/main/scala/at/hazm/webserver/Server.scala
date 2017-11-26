@@ -24,7 +24,7 @@ class Server {
     *
     * @param context サーバ設定
     */
-  def startup(context:Context):Unit = if (closed.compareAndSet(true, false)) {
+  def startup(context:Context):Unit = if(closed.compareAndSet(true, false)) {
     logger.info(s"starting server: ${context.dir} (directory ${if(context.dir.exists()) "available" else "not available"})")
     context.init()
     val config = context.config.server.get
@@ -44,7 +44,7 @@ class Server {
   /**
     * サーバを終了する。
     */
-  def shutdown():Unit = if (closed.compareAndSet(false, true)) {
+  def shutdown():Unit = if(closed.compareAndSet(false, true)) {
     logger.debug("shutting-down server...")
     server.close().onSuccess { _ =>
       logger.info(s"shutdown complete")
@@ -67,7 +67,7 @@ object Server {
     val context = new Context(dir, 2 * 1000L)
     val server = new Server()
 
-    while (true) {
+    while(true) {
       context.config.server.get
       context.config.server.onUpdate { (_, _) =>
         server.shutdown()
@@ -166,7 +166,7 @@ object Server {
         override def run():Unit = {
           val result = Try(f)
           promise.synchronized {
-            if (!promise.isCompleted) promise.complete(result)
+            if(!promise.isCompleted) promise.complete(result)
           }
         }
       }
@@ -205,13 +205,13 @@ object Server {
         try {
           val result = f
           promise.synchronized {
-            if (!promise.isCompleted) promise.success(result)
+            if(!promise.isCompleted) promise.success(result)
           }
         } catch {
           case ex:Throwable if !ex.isInstanceOf[ThreadDeath] =>
             logger.warn("unhandled exception", ex)
             promise.synchronized {
-              if (!promise.isCompleted) promise.failure(ex)
+              if(!promise.isCompleted) promise.failure(ex)
             }
         } finally {
           call.cancel()

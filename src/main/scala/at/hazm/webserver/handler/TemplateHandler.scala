@@ -1,6 +1,6 @@
 package at.hazm.webserver.handler
 
-import java.io.{File, FileNotFoundException}
+import java.io.FileNotFoundException
 import java.nio.file.Path
 import java.util.Date
 
@@ -56,7 +56,7 @@ class TemplateHandler(docroot:Path, cacheDir:Path, mime:Cache[MimeType], manager
 }
 
 object TemplateHandler {
-  def makeParameters(request:Request):Map[String,String] = Map(
+  def makeParameters(request:Request):Map[String, String] = Map(
     "method" -> request.method.name,
     "uri" -> request.uri,
     "path" -> request.path,

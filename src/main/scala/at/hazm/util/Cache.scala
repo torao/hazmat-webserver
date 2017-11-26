@@ -9,7 +9,6 @@ import java.util.{Timer, TimerTask}
 
 import at.hazm.using
 import at.hazm.util.Cache.{Builder, Source}
-import com.typesafe.config.{Config, ConfigFactory}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -34,7 +33,7 @@ class Cache[T](path:String, source:Source, builder:Builder[T], verifyAfter:Long 
 
   def get:T = {
     val tm = System.currentTimeMillis()
-    if (tm - verifiedAt < verifyAfter) {
+    if(tm - verifiedAt < verifyAfter) {
       value.get()
     } else {
       verifiedAt = tm
@@ -108,8 +107,8 @@ object Cache {
     def getIfModified(path:String, lastModified:Long):Option[(Long, Array[Byte])] = {
       val file = new File(dir, path)
       val local = file.lastModified()
-      if (local != lastModified) {
-        val binary = if (file.isFile) Files.readAllBytes(file.toPath) else Array.empty[Byte]
+      if(local != lastModified) {
+        val binary = if(file.isFile) Files.readAllBytes(file.toPath) else Array.empty[Byte]
         Some((local, binary))
       } else None
     }

@@ -1,12 +1,10 @@
 package at.hazm
 
 import java.net.URI
-import java.nio.charset.{Charset, StandardCharsets}
 import java.text.SimpleDateFormat
 import java.util.{Date, Locale, TimeZone}
 
 import com.twitter.finagle.http.Request
-import play.api.libs.json.{JsValue, Json}
 
 import scala.util.Try
 
@@ -28,7 +26,7 @@ package object webserver {
       request.headerMap.get("X-Forwarded-Host").orElse(request.host).flatMap { host =>
         val scheme = request.headerMap.get("X-Forwarded-Proto").getOrElse("http")
         val uri = URI.create(request.uri).normalize().toString
-        if (uri.startsWith("/")) Some(s"$scheme://$host$uri") else None
+        if(uri.startsWith("/")) Some(s"$scheme://$host$uri") else None
       }
     }
 
@@ -44,4 +42,5 @@ package object webserver {
       }.collectFirst { case Some(x) => x }
     }
   }
+
 }

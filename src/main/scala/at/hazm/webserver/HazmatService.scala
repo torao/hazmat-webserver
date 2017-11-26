@@ -40,7 +40,7 @@ class HazmatService(context:Context) extends TFService[Request, Response] {
     new FileHandler(context.docroot.toPath, serverConfig.server.sendBufferSize, context.config.mime)
   )
 
-  (asyncHandlers ++ handlers).foreach{ h =>
+  (asyncHandlers ++ handlers).foreach { h =>
     h.config_=(context.config.server)
     h.errorTemplateEngine_=(new XSLTEngine(context.dir))
   }

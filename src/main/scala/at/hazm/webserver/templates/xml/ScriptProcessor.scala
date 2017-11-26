@@ -8,6 +8,7 @@ import javax.xml.xpath.{XPathConstants, XPathFactory}
 
 import at.hazm.using
 import at.hazm.webserver.Dependency
+import jdk.nashorn.api.scripting.ScriptObjectMirror
 import org.slf4j.LoggerFactory
 import org.w3c.dom.{Document, Element, Node}
 
@@ -29,8 +30,25 @@ class ScriptProcessor(scripts:File) extends DocumentProcessor {
           engine.put("doc", doc)
           engine.put("location", location.toString)
           engine.put("context", context)
-          engine.eval(in)
-          context.getDependency
+          val deps = (engine.eval(in) match {
+            case _:Void => Seq.empty
+            case null => Seq.empty
+            case uris:Array[_] => uris.toSeq
+            case uri:String => Seq(uri)
+            case arr:ScriptObjectMirror =>
+              if(arr.isArray) {
+                for(i <- 0 until arr.size()) yield arr.getSlot(i)
+              } else {
+                ScriptProcessor.logger.warn(s"the return value '$arr' of script ${f.getName} should be array of string that means dependency url")
+                Seq.empty
+              }
+            case unexpected =>
+              ScriptProcessor.logger.warn(s"the return value '$unexpected' of script ${f.getName} should be array of string that means dependency url")
+              Seq.empty
+          }).collect {
+            case uri:String => uri
+          }
+          context.getDependency + Dependency(deps.map(uri => location.toURI.resolve(uri).normalize().toURL):_*)
         }
       }.reduceLeftOption(_ + _).getOrElse(Dependency())
     } else Dependency()
