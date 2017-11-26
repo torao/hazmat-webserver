@@ -199,13 +199,19 @@ XSL テンプレートには `method`, `host`, `uri`, `path` がパラメータ�
 | location | java.lang.String | ドキュメントのURL    |
 | context  | Context | ヘルパー関数 |
 
-ヘルパー関数
+ヘルパー関数は [ScriptProcessor$Context](https://github.com/torao/hazmat-webserver/blob/master/src/main/scala/at/hazm/webserver/templates/xml/ScriptProcessor.scala#L60)
+クラスのメソッドが使用できる。
 
-| 変数名 | 型 | 意味 |
-|:-------|:---|:-----|
+| メソッド |
+|:-----------|
 | findElements(node:(Document or Element), namespace:String, localName:String):Array[Element] |
 | loadXML(url:String):Document |
 | getString(node:Node, xpath:String):String |
+| getBoolean(node:Node, xpath:String):Boolean |
+| getStrings(node:Node, xpath:String):Array[String] |
+
+スクリプト実行中に `loadXML()` したファイルは生成元コンテンツの依存先として登録される。それ以外に依存先として
+登録したい URI があればスクリプトの評価結果で配列として返すことで認識される。
 
 ## Scripts Processing
 
@@ -283,7 +289,7 @@ JSON として有効なデータであれば説明するまでもなくうまく
 実行時の例外は Java の例外クラス名がそのまま表れるだろう。
 エラーレスポンスをカスタマイズしたければ自分で `try-catch` を使うといい。
 
-### Mechanizm
+### Mechanism
 
 HazMat サーバのスクリプトエンジンは Node.js なんかじゃねえ。Java 8 にバンドルされている Nashorn だ。
 だから JavaScript の言語機能に加えて Java の機能がフルに使える。
