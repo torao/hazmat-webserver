@@ -1,7 +1,7 @@
 package at.hazm.webserver.templates.xml
 
 import java.io.{BufferedReader, File, FileReader}
-import java.net.URL
+import java.net.{URI, URL}
 import javax.script.{ScriptEngine, ScriptEngineManager}
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.xpath.{XPathConstants, XPathFactory}
@@ -14,7 +14,7 @@ import org.w3c.dom.{Document, Element, Node, NodeList}
 
 import scala.collection.mutable
 
-class ScriptProcessor(scripts:File) extends DocumentProcessor {
+class ScriptProcessor(scripts:File, docroot:URL) extends DocumentProcessor {
 
   override def process(doc:Document, location:URL):Dependency = {
     val dep = if(scripts.isDirectory) {
@@ -26,7 +26,7 @@ class ScriptProcessor(scripts:File) extends DocumentProcessor {
       }.map { case (engine, f) =>
         engine.put(ScriptEngine.FILENAME, f.toString)
         using(new BufferedReader(new FileReader(f))) { in =>
-          val context = new ScriptProcessor.Context(doc, location)
+          val context = new ScriptProcessor.Context(doc, docroot.toURI.normalize(), location)
           engine.put("doc", doc)
           engine.put("location", location.toString)
           engine.put("context", context)
@@ -61,7 +61,7 @@ object ScriptProcessor {
   private[ScriptProcessor] val logger = LoggerFactory.getLogger(classOf[ScriptProcessor])
   private[this] val XMLNS = "xmlns:(.*)".r
 
-  class Context(doc:Document, location:URL) {
+  class Context(doc:Document, docroot:URI, location:URL) {
     private[this] var dependencies = Dependency()
     private[this] lazy val xpath = XPathFactory.newInstance().newXPath()
 
@@ -76,8 +76,22 @@ object ScriptProcessor {
       buf.toArray
     }
 
+    def resolve(uri:String):String = {
+      val url = docroot.resolve(toAbsoluteURI(uri).toString.dropWhile(_ == '/')).normalize().toString
+      val prefix = docroot.toString
+      if(url.startsWith(prefix)) {
+        (if(prefix.endsWith("/")) "/" else "") + url.substring(prefix.length)
+      } else url
+    }
+
+    private[this] def toAbsoluteURI(uri:String):URI = if(uri.startsWith("/")) {
+      docroot.resolve(uri.dropWhile(_ == '/')).normalize()
+    } else {
+      location.toURI.resolve("./").resolve(uri).normalize()
+    }
+
     def loadXML(uri:String):Document = {
-      val url = location.toURI.resolve("./").resolve(uri).toURL
+      val url = toAbsoluteURI(uri).toURL
       dependencies = dependencies + Dependency(url)
       // logger.debug(s"loading external xml: $url from $location ($uri)")
       DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(url.toString)

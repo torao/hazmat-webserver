@@ -1,6 +1,7 @@
 package at.hazm.webserver.templates
 
 import java.io._
+import java.net.URL
 import java.nio.charset.StandardCharsets
 
 import at.hazm.webserver.templates.xml.{DocumentProcessor, DocumentWriter, PrettifyProcessor, ScriptProcessor, XMLLoader}
@@ -11,10 +12,10 @@ import at.hazm.webserver.{Dependency, TemplateEngine}
   *
   * @param dir サイトのルートディレクトリ
   */
-class XSLTEngine(dir:File) extends TemplateEngine {
+class XSLTEngine(dir:File, docroot:URL) extends TemplateEngine {
 
   private[this] val processors = List[DocumentProcessor](
-    new ScriptProcessor(new File(dir, "scripts/")),
+    new ScriptProcessor(new File(dir, "scripts/"), docroot),
     new PrettifyProcessor()
   )
 
