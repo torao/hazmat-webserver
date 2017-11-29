@@ -24,9 +24,9 @@ libraryDependencies ++= Seq(
   "org.slf4j"     % "slf4j-log4j12"  % "1.7.+"
 )
 
-// Docker image settings
-
-enablePlugins(JavaServerAppPackaging, UniversalPlugin, DockerPlugin)
+// Docker image and executable shell archive settings
+// ClasspathJarPlugin is for long-classpath on windows
+enablePlugins(JavaServerAppPackaging, UniversalPlugin, DockerPlugin, ClasspathJarPlugin)
 
 dockerBaseImage in Docker := "java:8-jdk-alpine"
 
