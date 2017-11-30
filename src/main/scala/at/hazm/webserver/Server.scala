@@ -25,7 +25,7 @@ class Server {
     * @param context サーバ設定
     */
   def startup(context:Context):Unit = if(closed.compareAndSet(true, false)) {
-    logger.info(s"starting server: ${context.dir} (directory ${if(context.dir.exists()) "available" else "not available"})")
+    logger.info(s"starting HazMat Web Server for Java ${System.getProperty("java.version")} (${System.getProperty("java.runtime.name")} ${System.getProperty("java.runtime.version")}) on ${context.dir} (directory ${if(context.dir.exists()) "available" else "not available"})")
     context.init()
     val config = context.config.server.get
 

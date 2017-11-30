@@ -1,7 +1,8 @@
 package at.hazm.webserver.templates.xml
 
-import java.io.{BufferedReader, File, FileReader}
+import java.io._
 import java.net.{URI, URL}
+import java.nio.charset.StandardCharsets
 import javax.script.{ScriptEngine, ScriptEngineManager}
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.xpath.{XPathConstants, XPathFactory}
@@ -25,7 +26,7 @@ class ScriptProcessor(scripts:File, docroot:URL) extends DocumentProcessor {
         Option(manager.getEngineByExtension(ext)).map(engine => (engine, f))
       }.map { case (engine, f) =>
         engine.put(ScriptEngine.FILENAME, f.toString)
-        using(new BufferedReader(new FileReader(f))) { in =>
+        using(new BufferedReader(new InputStreamReader(new FileInputStream(f), StandardCharsets.UTF_8))) { in =>
           val context = new ScriptProcessor.Context(doc, docroot.toURI.normalize(), location)
           engine.put("doc", doc)
           engine.put("location", location.toString)
