@@ -1,6 +1,6 @@
 package at.hazm.webserver.templates.xml
 
-import java.net.URL
+import java.io.File
 
 import at.hazm.webserver.Dependency
 import org.w3c.dom.{Document, Element, Node, Text}
@@ -21,7 +21,7 @@ class PrettifyProcessor extends DocumentProcessor {
     "html", "head", "body", "nav", "footer", "div", "ul", "ol", "dl", "dd", "table", "tr", "thead", "tbody", "tfoot",
     "form", "blockquote", "select")
 
-  override def process(doc:Document, location:URL):Dependency = {
+  override def process(doc:Document, location:File):Dependency = {
     // doc.getDocumentElement.setAttribute("xmlns", "http://www.w3.org/1999/xhtml")
     concatJapanese(doc.getDocumentElement)
     setIndent(doc.getDocumentElement, 0)

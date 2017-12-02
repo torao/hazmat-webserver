@@ -1,7 +1,7 @@
 package at.hazm.webserver.templates.xml
 
 import java.io._
-import java.net.{URI, URL}
+import java.net.URI
 import java.nio.charset.StandardCharsets
 import javax.script.{ScriptEngine, ScriptEngineManager}
 import javax.xml.parsers.DocumentBuilderFactory
@@ -15,9 +15,9 @@ import org.w3c.dom.{Document, Element, Node, NodeList}
 
 import scala.collection.mutable
 
-class ScriptProcessor(scripts:File, docroot:URL) extends DocumentProcessor {
+class ScriptProcessor(scripts:File, docroot:File) extends DocumentProcessor {
 
-  override def process(doc:Document, location:URL):Dependency = {
+  override def process(doc:Document, location:File):Dependency = {
     val dep = if(scripts.isDirectory) {
       val manager = new ScriptEngineManager()
       scripts.listFiles().flatMap { f =>
@@ -27,7 +27,7 @@ class ScriptProcessor(scripts:File, docroot:URL) extends DocumentProcessor {
       }.map { case (engine, f) =>
         engine.put(ScriptEngine.FILENAME, f.toString)
         using(new BufferedReader(new InputStreamReader(new FileInputStream(f), StandardCharsets.UTF_8))) { in =>
-          val context = new ScriptProcessor.Context(doc, docroot.toURI.normalize(), location)
+          val context = new ScriptProcessor.Context(doc, docroot, location)
           engine.put("doc", doc)
           engine.put("location", location.toString)
           engine.put("context", context)
@@ -49,7 +49,7 @@ class ScriptProcessor(scripts:File, docroot:URL) extends DocumentProcessor {
           }).collect {
             case uri:String => uri
           }
-          context.getDependency + Dependency(deps.map(uri => location.toURI.resolve(uri).normalize().toURL):_*)
+          context.getDependency + Dependency(deps.flatMap(uri => context.toAbsoluteFile(uri)).map(_.toURI.toURL):_*)
         }
       }.reduceLeftOption(_ + _).getOrElse(Dependency())
     } else Dependency()
@@ -62,9 +62,18 @@ object ScriptProcessor {
   private[ScriptProcessor] val logger = LoggerFactory.getLogger(classOf[ScriptProcessor])
   private[this] val XMLNS = "xmlns:(.*)".r
 
-  class Context(doc:Document, docroot:URI, location:URL) {
+  /**
+    *
+    * @param doc      location からロードされ XSLT 処理された XML ドキュメント
+    * @param docroot  ドキュメントルートのディレクトリ
+    * @param location doc のローカルファイル
+    */
+  class Context(doc:Document, docroot:File, location:File) {
+    assert(docroot.isAbsolute && docroot.isDirectory)
+    assert(location.isAbsolute) // ※動的に生成された XML かもしれない
     private[this] var dependencies = Dependency()
     private[this] lazy val xpath = XPathFactory.newInstance().newXPath()
+    private[this] val docrootURI = docroot.toURI
 
     def getDependency:Dependency = dependencies
 
@@ -77,22 +86,42 @@ object ScriptProcessor {
       buf.toArray
     }
 
-    def resolve(uri:String):String = {
-      val url = docroot.resolve(toAbsoluteURI(uri).toString.dropWhile(_ == '/')).normalize().toString
-      val prefix = docroot.toString
-      if(url.startsWith(prefix)) {
-        (if(prefix.endsWith("/")) "/" else "") + url.substring(prefix.length)
-      } else url
+    /**
+      * 指定された URI を URL 上のパスにマッピングします。
+      *
+      * @param href 変換する URI
+      * @return docroot からのパス
+      */
+    def resolve(href:String):String = toAbsoluteFile(href) match {
+      case Some(file) => "/" + docrootURI.relativize(file.toURI).normalize()
+      case None => href
     }
 
-    private[this] def toAbsoluteURI(uri:String):URI = if(uri.startsWith("/")) {
-      docroot.resolve(uri.dropWhile(_ == '/')).normalize()
-    } else {
-      location.toURI.resolve("./").resolve(uri).normalize()
-    }
+    /**
+      * 指定された URI をローカルファイルシステムのパスにマッピングします。
+      *
+      * @param href ローカルのパスに変換する URI
+      * @return ローカルのパス。href が絶対 URI や docroot より外を示す場合は None
+      */
+    private[ScriptProcessor] def toAbsoluteFile(href:String):Option[File] = {
+      val uri = new URI(href).normalize()
+      if(uri.isAbsolute) {
+        None
+      } else if(uri.toString.startsWith("..")) {
+        logger.warn(s"uri specifies out of public directory: $uri")
+        None
+      } else if(uri.toString.startsWith("/")) {
+        Some(new File(docroot, uri.toString.dropWhile(_ == '/')))
+      } else {
+        Some(new File(location.toURI.resolve(href)))
+      }
+    }.map(_.getAbsoluteFile)
 
     def loadXML(uri:String):Document = {
-      val url = toAbsoluteURI(uri).toURL
+      val url = toAbsoluteFile(uri) match {
+        case Some(file) => file.toURI.toURL
+        case None => new URI(uri).toURL
+      }
       dependencies = dependencies + Dependency(url)
       // logger.debug(s"loading external xml: $url from $location ($uri)")
       DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(url.toString)

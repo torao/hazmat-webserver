@@ -35,14 +35,14 @@ class HazmatService(context:Context) extends TFService[Request, Response] {
     new RedirectHandler(context.docroot.toPath, context.config.server),
     new TemplateHandler(context.docroot.toPath, context.cache.toPath, context.config.mime,
       new TemplateEngine.Manager(context.docroot, serverConfig.template.updateCheckInterval,
-        new XSLTEngine(context.dir, context.docroot.toURI.toURL), new SASSEngine(), new TypeScriptEngine(), new SVGEngine())
+        new XSLTEngine(context.dir, context.docroot), new SASSEngine(), new TypeScriptEngine(), new SVGEngine())
     ),
     new FileHandler(context.docroot.toPath, serverConfig.server.sendBufferSize, context.config.mime)
   )
 
   (asyncHandlers ++ handlers).foreach { h =>
     h.config_=(context.config.server)
-    h.errorTemplateEngine_=(new XSLTEngine(context.dir, context.docroot.toURI.toURL))
+    h.errorTemplateEngine_=(new XSLTEngine(context.dir, context.docroot))
   }
 
   def apply(request:Request):Future[Response] = {

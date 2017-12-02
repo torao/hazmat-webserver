@@ -1,6 +1,6 @@
 package at.hazm.webserver.templates.xml
 
-import java.net.URL
+import java.io.File
 
 import at.hazm.webserver.Dependency
 import org.w3c.dom.{Document, Element}
@@ -12,11 +12,11 @@ import org.w3c.dom.{Document, Element}
   */
 abstract class NSProcessor(val namespace:String) extends DocumentProcessor {
 
-  override def process(doc:Document, location:URL):Dependency = {
+  override def process(doc:Document, location:File):Dependency = {
     process(getElements(doc.getDocumentElement), location)
   }
 
-  protected def process(elems:Seq[Element], location:URL):Dependency
+  protected def process(elems:Seq[Element], location:File):Dependency
 
   /**
     * 指定された要素以下をトラバースしてこのインスタンスが定義する名前空間を持つ要素を参照します。階層構造の上位要素から、同一階層であれば
