@@ -29,7 +29,8 @@ class ScriptProcessor(scripts:File, docroot:File) extends DocumentProcessor {
         using(new BufferedReader(new InputStreamReader(new FileInputStream(f), StandardCharsets.UTF_8))) { in =>
           val context = new ScriptProcessor.Context(doc, docroot, location)
           engine.put("doc", doc)
-          engine.put("location", location.toString)
+          engine.put("docroot", docroot.toString)
+          engine.put("location", "/" + docroot.toURI.relativize(location.toURI).toString)
           engine.put("context", context)
           val deps = (engine.eval(in) match {
             case _:Void => Seq.empty
@@ -77,6 +78,13 @@ object ScriptProcessor {
 
     def getDependency:Dependency = dependencies
 
+    /**
+      * 指定されたノードを基準に指定された名前空間、要素名を持つ要素を参照します。
+      *
+      * @param node 基準とするノード
+      * @param ns   名前空間
+      * @param name 要素のローカル名
+      */
     def findElements(node:Node, ns:String, name:String):Array[Element] = {
       val buf = mutable.Buffer[Element]()
       node match {
@@ -87,7 +95,8 @@ object ScriptProcessor {
     }
 
     /**
-      * 指定された URI を URL 上のパスにマッピングします。
+      * 指定された URI を処理対象のドキュメントを基準にした URI に変換します。URI が相対パスの場合、ドキュメントルートからのパスに変換され
+      * ます。URI が絶対パスの場合はそのまま返されます。
       *
       * @param href 変換する URI
       * @return docroot からのパス
@@ -117,18 +126,24 @@ object ScriptProcessor {
       }
     }.map(_.getAbsoluteFile)
 
+    /**
+      * 処理対象となっているドキュメントの場所を基準に指定された相対 URI で指定された XML ドキュメントをロードします。このメソッドで参照した
+      * URL は自動的に依存関係に追加されます。
+      *
+      * @param uri ロードする XML 文書の URI
+      * @return ロードした XML 文書
+      */
     def loadXML(uri:String):Document = {
       val url = toAbsoluteFile(uri) match {
         case Some(file) => file.toURI.toURL
         case None => new URI(uri).toURL
       }
       dependencies = dependencies + Dependency(url)
-      // logger.debug(s"loading external xml: $url from $location ($uri)")
       DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(url.toString)
     }
 
     /**
-      * 指定されたノードに対して XPath で指定された文字列を取得します。
+      * 指定されたノードを基準に XPath で指定された文字列を取得します。
       *
       * @param node  文字列を取得するノード
       * @param xpath 文字列の XPath
@@ -138,10 +153,24 @@ object ScriptProcessor {
       this.xpath.evaluate(xpath, node, XPathConstants.STRING).asInstanceOf[String]
     }
 
+    /**
+      * 指定されたノードを基準に XPath で指定されたブーリアン値を取得します。
+      *
+      * @param node  ブール値を取得するノード
+      * @param xpath ブール値 XPath
+      * @return ブール値
+      */
     def getBoolean(node:Node, xpath:String):Boolean = {
       this.xpath.evaluate(xpath, node, XPathConstants.BOOLEAN).asInstanceOf[Boolean]
     }
 
+    /**
+      * 指定されたノードを基準に XPath で指定された文字列配列を取得します。
+      *
+      * @param node  文字列配列を取得するノード
+      * @param xpath 文字列配列の XPath
+      * @return 文字列配列
+      */
     def getStrings(node:Node, xpath:String):Array[String] = {
       val nl = this.xpath.evaluate(xpath, node, XPathConstants.NODESET).asInstanceOf[NodeList]
       (for(i <- 0 until nl.getLength) yield nl.item(i).getTextContent).toArray

@@ -193,11 +193,12 @@ XSL テンプレートには `method`, `host`, `uri`, `path` がパラメータ�
 `$SERVER_HOME/scripts` に保存されている *.js ファイルが使用されます。複数の JS ファイルが存在する場合はファイル名のソート
 順に適用されます。
 
-| 変数名 | 型 | 意味 |
-|:-------|:---|:-----|
-| doc      | org.w3c.dom.Document | 操作するドキュメント |
-| location | java.lang.String | ドキュメントのURL    |
-| context  | Context | ヘルパー関数 |
+| 変数名 | 型 | 意味 | 例 |
+|:-------|:---|:-----|:---|
+| doc      | org.w3c.dom.Document | 操作するドキュメント | - |
+| docroot  | String | サイトのルートディレクトリ | file:///opt/mysite/ | 
+| location | String | ドキュメントのURI    | /moxbox/index.xhtml |
+| context  | Context | ヘルパー関数 | - |
 
 ヘルパー関数は [ScriptProcessor$Context](https://github.com/torao/hazmat-webserver/blob/master/src/main/scala/at/hazm/webserver/templates/xml/ScriptProcessor.scala#L60)
 クラスのメソッドが使用できる。
