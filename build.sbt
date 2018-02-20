@@ -44,7 +44,7 @@ dockerUpdateLatest in Docker := true
 
 // dockerRepository in Docker := Some("torao/hazmat-webserver")
 
-import com.typesafe.sbt.packager.docker._
-dockerCommands ++= Seq(
-  ExecCmd("RUN", "apk", "add", "--update", "nodejs", "nodejs-npm")
-)
+// import com.typesafe.sbt.packager.docker._
+// dockerCommands ++= Seq(
+//   ExecCmd("RUN", "apk", "add", "--update", "nodejs", "nodejs-npm")
+// )
