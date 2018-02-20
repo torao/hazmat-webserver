@@ -36,6 +36,11 @@ class ScriptHandler(docroot:Path, timeout:Long, exts:Seq[String], libs:ClassLoad
       "query" -> query
     )) + ";")
 
+    // JavaScript 処理に渡す環境情報を評価
+    engine.eval("var env = " + Json.stringify(Json.obj(
+      "docroot" -> docroot.toAbsolutePath.toString
+    )) + ";")
+
     // Binding に設定するものは今のところ特にない
     val bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE)
     engine.setBindings(bindings, ScriptContext.ENGINE_SCOPE)
