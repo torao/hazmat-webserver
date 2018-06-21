@@ -15,7 +15,7 @@ import scala.util.{Failure, Success, Try}
 class Config(val source:URL, val config:com.typesafe.config.Config) {
   private[this] val logger = LoggerFactory.getLogger(getClass)
 
-  private[this] def _get[T](key:String, default: => T)(implicit converter:(String) => Either[String, T]):T = {
+  private[this] def _get[T](key:String, default: => T)(implicit converter:String => Either[String, T]):T = {
     Try(config.getString(s"$key")).toOption match {
       case Some(value) =>
         converter(value) match {
@@ -44,34 +44,36 @@ class Config(val source:URL, val config:com.typesafe.config.Config) {
     } else new File(".")).getAbsoluteFile.toPath.resolve(path).toFile
   }
 
-  private[this] class ExceptableConverter[T](converter:(String) => T) extends Function[String, Either[String, T]] {
+  private[this] class ExceptableConverter[T](converter:String => T) extends Function[String, Either[String, T]] {
     override def apply(value:String):Either[String, T] = Try(converter(value)) match {
       case Success(result) => Right(result)
       case Failure(ex) => Left(ex.toString)
     }
   }
 
-  private[this] implicit val _StringConverter = { value:String => Right(value) }
+  private[this] implicit val _StringConverter:String => Right[Nothing, String] = { value:String => Right(value) }
 
   private[this] implicit object _IntConverter extends ExceptableConverter[Int](_.toInt)
 
   private[this] implicit object _LongConverter extends ExceptableConverter[Long](_.toLong)
 
-  private[this] implicit val _StorageUnitConverter = Config.storageSize _
+  private[this] implicit val _StorageUnitConverter:String => Either[String, StorageUnit] = Config.storageSize
 
   object server {
-    private[this] def get[T](key:String, default:T)(implicit converter:(String) => Either[String, T]):T = _get[T](s"server.$key", default)(converter)
+    private[this] def get[T](key:String, default:T)(implicit converter:String => Either[String, T]):T = _get[T](s"server.$key", default)(converter)
+
+    val DefaultPort = 8089
 
     val requestTimeout:Long = get("request-timeout", 30) * 1000L
     val compressionLevel:Int = get("compression-level", 0)
     val maxRequestSize:StorageUnit = get("max-request-size", StorageUnit.fromKilobytes(500))
-    val bindAddress:InetSocketAddress = get("bind-address", new InetSocketAddress(80)) { value:String =>
+    val bindAddress:InetSocketAddress = get("bind-address", new InetSocketAddress(DefaultPort)) { value:String =>
       val HostPort = "(.*):(\\d+)".r
       try {
         value match {
           case HostPort("*", port) => Right(new InetSocketAddress(port.toInt))
           case HostPort(host, port) => Right(new InetSocketAddress(host, port.toInt))
-          case host => Right(new InetSocketAddress(host, 80))
+          case host => Right(new InetSocketAddress(host, DefaultPort))
         }
       } catch {
         case _:NumberFormatException => Left(s"invalid port number")
@@ -82,15 +84,15 @@ class Config(val source:URL, val config:com.typesafe.config.Config) {
   }
 
   object template {
-    private[this] def get[T](key:String, default:T)(implicit converter:(String) => Either[String, T]):T = _get[T](s"template.$key", default)(converter)
+    private[this] def get[T](key:String, default:T)(implicit converter:String => Either[String, T]):T = _get[T](s"template.$key", default)(converter)
 
     val updateCheckInterval:Long = get("update-check-interval", 2) * 1000L
   }
 
   object script {
-    private[this] def get[T](key:String, default:T)(implicit converter:(String) => Either[String, T]):T = _get[T](s"script.$key", default)(converter)
+    private[this] def get[T](key:String, default:T)(implicit converter:String => Either[String, T]):T = _get[T](s"script.$key", default)(converter)
 
-    private[this] def getArray[T](key:String, default:String)(implicit converter:(String) => Either[String, T]):Seq[T] = {
+    private[this] def getArray[T](key:String, default:String)(implicit converter:String => Either[String, T]):Seq[T] = {
       get(key, default).split(",").filter(_.nonEmpty).map(converter).collect { case Right(value) => value }
     }
 
