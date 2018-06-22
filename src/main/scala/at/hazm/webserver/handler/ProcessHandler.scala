@@ -18,7 +18,7 @@ import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
 
 /**
-  * ドキュメントルート上に配置されている JavaScript ファイルをサーバサイドで実行するためのリクエストハンドラ。
+  * ドキュメントディレクトリ上に配置されているスクリプトファイルをサーバサイドで実行するためのリクエストハンドラ。
   *
   * @param docroot ドキュメントルート
   * @param timeout 実行タイムアウト (ミリ秒)

@@ -36,28 +36,28 @@ class FileHandler(docroot:Path, sendBufferSize:Int, mime:Cache[MimeType]) extend
       getErrorResponse(request, Status.BadRequest)
   })
 
-  protected def getResource(request:Request, realPath:File):Either[Response, Resource] = if (realPath.isFile) {
-    if (realPath.canRead) {
+  protected def getResource(request:Request, realPath:File):Either[Response, Resource] = if(realPath.isFile) {
+    if(realPath.canRead) {
       Right(LocalFile(realPath))
     } else {
       logger.debug(s"resource don't have read permission: $realPath")
       Left(getErrorResponse(request, Status.Forbidden))
     }
-  } else if (realPath.isDirectory) {
+  } else if(realPath.isDirectory) {
     // ディレクトリが指定された場合はデフォルトHTMLにリダイレクト
     // ※index.html が動的生成の場合はファイルとして存在しないため Forbidden にする場合は他のハンドラが存在するかを判断しなければならない
     val indexFile = "index.html"
     request.originalURL match {
       case Some(location) =>
         Left(on(getErrorResponse(request, Status.Found)) { res =>
-          res.location = s"$location${if (location.endsWith("/")) "" else "/"}$indexFile"
+          res.location = s"$location${if(location.endsWith("/")) "" else "/"}$indexFile"
           logger.debug(s"directory redirect to: ${res.location.getOrElse("???")}")
         })
       case None =>
         logger.debug(s"original request is not available: $request")
         Left(getErrorResponse(request, Status.Forbidden))
     }
-  } else if (!docroot.toFile.exists()) {
+  } else if(!docroot.toFile.exists()) {
     // docroot ディレクトリが存在しない場合はデフォルトのページを表示
     val path = "/at/hazm/index.html"
     Option(getClass.getResource(path)) match {
@@ -87,7 +87,7 @@ object FileHandler {
   def mapLocalFile(docroot:Path, uri:String):Option[File] = {
     val path = uri.takeWhile { ch => ch != '?' && ch != '#' }
     val requestPath = docroot.resolve(path.dropWhile(_ == '/')).toAbsolutePath
-    if (!requestPath.toString.startsWith(docroot.toString)) {
+    if(!requestPath.toString.startsWith(docroot.toString)) {
       logger.debug(s"invalid uri: $requestPath isn't start with $docroot")
       None
     } else Some(requestPath.toFile)
@@ -101,7 +101,7 @@ object FileHandler {
     * @return 304 レスポンスまたは None
     */
   def ifModifiedSince(request:Request, lastModified:Long):Option[Response] = request.getDateHeader("If-Modified-Since").flatMap { ifModifiedSince =>
-    if ((ifModifiedSince.getTime - lastModified) / 1000 >= 0) {
+    if((ifModifiedSince.getTime - lastModified) / 1000 >= 0) {
       Some(on(Response(Version.Http11, Status.NotModified)) { res =>
         res.cacheControl = "no-cache"
       })

@@ -1,9 +1,11 @@
 package at.hazm.webserver
 
+import java.net.InetAddress
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.{Properties, Timer, TimerTask}
 
 import at.hazm.using
+import at.hazm.webserver.Server.logger
 import com.twitter.finagle.{Http, ListeningServer}
 import com.twitter.util.{Await, Duration}
 import org.slf4j.LoggerFactory
@@ -11,10 +13,10 @@ import org.slf4j.LoggerFactory
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.Try
 
-
+/**
+  * サーバクラス。
+  */
 class Server {
-
-  import Server.logger
 
   private[this] var server:ListeningServer = _
   private[this] val closed = new AtomicBoolean(true)
@@ -31,13 +33,20 @@ class Server {
 
     val service = new HazmatService(context)
 
+    val port = config.server.bindAddress.getPort
+    val bindAddressLabels = (config.server.bindAddress.getHostName.trim() match {
+      case "0.0.0.0" | "*" =>
+        InetAddress.getAllByName(InetAddress.getLocalHost.getHostAddress).map(_.getHostName).toSeq :+ "localhost"
+      case host => Seq(host)
+    }).distinct.sorted.map(host => s"http://$host${if(port!=80) s":$port" else ""}").mkString(", ")
+
     server = Http.server
       .withStreaming(true)
       .withRequestTimeout(Duration.fromMilliseconds(config.server.requestTimeout))
       .withCompressionLevel(config.server.compressionLevel)
       .withMaxRequestSize(config.server.maxRequestSize)
       .serve(config.server.bindAddress, service)
-    logger.info(s"listening on ${config.server.bindAddress.getHostName}:${config.server.bindAddress.getPort}")
+    logger.info(s"listening on $bindAddressLabels")
     Await.result(server)
   }
 
@@ -184,6 +193,7 @@ object Server {
     /**
       * タイムアウト処理付きの非同期実行。
       * 指定された処理を非同期で起動するとともに、タイムアウト時間になったら割り込みを行いコールバックする。
+      * タイムアウト時間に 0 以下の値を指定した場合は直ちにタイムアウト手続きを行う。
       *
       * @param interval  処理タイムアウトまでの時間 (ミリ秒)
       * @param onTimeout 処理がタイムアウトした時のコールバック。返値で Future の結果を置き換える。
@@ -192,32 +202,36 @@ object Server {
       * @tparam T 非同期処理の結果の型
       * @return 処理結果
       */
-    def runWithTimeout[T](interval:Long, onTimeout:(Thread) => Future[T] = defaultOnTimeout _)(f: => T)(implicit _context:ExecutionContext):Future[T] = {
-      val promise = Promise[T]()
-      Future {
-        val current = Thread.currentThread()
-        val (_, call) = at(interval) {
-          promise.synchronized {
-            current.interrupt()
-            promise.completeWith(onTimeout(current))
-          }
-        }
-        try {
-          val result = f
-          promise.synchronized {
-            if(!promise.isCompleted) promise.success(result)
-          }
-        } catch {
-          case ex:Throwable if !ex.isInstanceOf[ThreadDeath] =>
-            logger.warn("unhandled exception", ex)
+    def runWithTimeout[T](interval:Long, onTimeout:Thread => Future[T] = defaultOnTimeout _)(f: => T)(implicit _context:ExecutionContext):Future[T] = {
+      if(interval <= 0) {
+        onTimeout(Thread.currentThread())
+      } else {
+        val promise = Promise[T]()
+        Future {
+          val current = Thread.currentThread()
+          val (_, call) = at(interval) {
             promise.synchronized {
-              if(!promise.isCompleted) promise.failure(ex)
+              current.interrupt()
+              promise.completeWith(onTimeout(current))
             }
-        } finally {
-          call.cancel()
+          }
+          try {
+            val result = f
+            promise.synchronized {
+              if(!promise.isCompleted) promise.success(result)
+            }
+          } catch {
+            case ex:Throwable if !ex.isInstanceOf[ThreadDeath] =>
+              logger.warn("unhandled exception", ex)
+              promise.synchronized {
+                if(!promise.isCompleted) promise.failure(ex)
+              }
+          } finally {
+            call.cancel()
+          }
         }
+        promise.future
       }
-      promise.future
     }
   }
 
