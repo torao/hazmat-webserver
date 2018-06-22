@@ -92,7 +92,7 @@ object Server {
     */
   val Version:String = {
     import scala.collection.JavaConverters._
-    val serverVersion = this.getClass.getClassLoader.getResources("META-INFO/MANIFEST.MF").asScala.map { url =>
+    val serverVersion = this.getClass.getClassLoader.getResources("META-INF/MANIFEST.MF").asScala.map { url =>
       val mf = new java.util.jar.Manifest()
       mf.read(url.openStream())
       mf.getMainAttributes
