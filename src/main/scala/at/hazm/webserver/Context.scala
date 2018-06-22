@@ -16,6 +16,22 @@ import scala.annotation.tailrec
 
 class Context private[this](val dir:File, timestampCheckInterval:Long) {
   private[this] val logger = LoggerFactory.getLogger(getClass)
+  private[this] val confDir = new File(dir, "conf")
+
+  locally {
+    val delay = 15 * 1000
+    val xml = new File(confDir, "log4j.xml")
+    if(xml.isFile){
+      org.apache.log4j.xml.DOMConfigurator.configureAndWatch(xml.getAbsolutePath, delay)
+      logger.debug(f"initiate logger: $xml ($delay%,dms)")
+    } else {
+      val prop = new File(confDir, "log4j.properties")
+      if(prop.isFile) {
+        org.apache.log4j.PropertyConfigurator.configureAndWatch(prop.getAbsolutePath, delay)
+        logger.debug(f"initiate logger: $prop ($delay%,dms)")
+      }
+    }
+  }
 
   logger.debug(s"application context: ${dir.getAbsolutePath}")
 
@@ -29,7 +45,6 @@ class Context private[this](val dir:File, timestampCheckInterval:Long) {
   val cache = new File(dir, "cache")
 
   object config {
-    private[this] val confDir = new File(dir, "conf")
     if(! confDir.exists()){
       logger.warn(s"configuration directory is not exist: ${confDir.getAbsolutePath} (not exists)")
     }

@@ -59,7 +59,7 @@ class CommandHandler(docroot:Path, timeout:Long, prefix:String, interpreters:Map
 
     // プロセスの構築
     val builder = new ProcessBuilder()
-      .command(interpreter, "\"" + file.getCanonicalPath + "\"")
+      .command(interpreter, file.getName)
       .directory(file.getParentFile)
       .redirectError(ProcessBuilder.Redirect.INHERIT)
       .redirectInput(ProcessBuilder.Redirect.PIPE)
@@ -152,10 +152,7 @@ class CommandHandler(docroot:Path, timeout:Long, prefix:String, interpreters:Map
         response.headerMap.add(name, value)
       }
       response
-    }
-  }.getOrElse {
-    logger.error(f"invlid heder")
-    getErrorResponse(request, Status.InternalServerError)
+    }.getOrElse(getErrorResponse(request, Status.InternalServerError))
   }
 
 }

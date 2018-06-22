@@ -38,7 +38,7 @@ class Server {
       case "0.0.0.0" | "*" =>
         InetAddress.getAllByName(InetAddress.getLocalHost.getHostAddress).map(_.getHostName).toSeq :+ "localhost"
       case host => Seq(host)
-    }).distinct.sorted.map(host => s"http://$host${if(port!=80) s":$port" else ""}").mkString(", ")
+    }).distinct.sorted.map(host => s"http://$host${if(port != 80) s":$port" else ""}").mkString(", ")
 
     server = Http.server
       .withStreaming(true)
@@ -89,6 +89,20 @@ object Server {
     * サーバのバージョン文字列。`Server` レスポンスヘッダに使用する。
     */
   val Version:String = {
+    import scala.collection.JavaConverters._
+    val serverVersion = this.getClass.getClassLoader.getResources("META-INFO/MANIFEST.MF").asScala.map { url =>
+      val mf = new java.util.jar.Manifest()
+      mf.read(url.openStream())
+      mf.getMainAttributes
+    }.find { attrs =>
+      attrs.getValue("Implementation-Vendor-Id") == "at.hazm" && attrs.getValue("Implementation-Title") == "hazmat-webserver"
+    } match {
+      case Some(attr) => attr.getValue("Implementation-Version")
+      case None =>
+        logger.warn("server version is not found in META-INFO/MANIFEST.MF")
+        "???"
+    }
+
     val finagleVersion = {
       val candidates = Seq("finagle-core", "finagle-core_2.11", "finagle-core_2.12").map { c =>
         s"/com/twitter/$c/build.properties"
@@ -113,7 +127,7 @@ object Server {
         "???"
       }
     }
-    s"HazMat Server/1.0 Finagle/$finagleVersion"
+    s"HazMat Server/$serverVersion Finagle/$finagleVersion"
   }
 
   private[this] def initLogging():Unit = {
