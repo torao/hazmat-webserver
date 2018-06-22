@@ -1,5 +1,6 @@
 package at.hazm.webserver
 
+import java.io.File
 import java.net.InetAddress
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.{Properties, Timer, TimerTask}
@@ -73,6 +74,7 @@ object Server {
     logger.debug(s"${classOf[Server].getName}.main(${args.mkString("\"", "\", \"", "\"")})")
 
     val dir = args.headOption.getOrElse(".")
+    System.setProperty("hazmat.context.dir", new File(dir).getAbsolutePath)
     val context = new Context(dir, 2 * 1000L)
     val server = new Server()
 
