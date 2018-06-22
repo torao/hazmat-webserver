@@ -6,7 +6,7 @@ import java.nio.charset.StandardCharsets
 import java.util.regex.Pattern
 
 import com.twitter.util.StorageUnit
-import com.typesafe.config.{ConfigFactory, ConfigUtil}
+import com.typesafe.config.{ConfigFactory, ConfigList, ConfigRenderOptions, ConfigUtil}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -15,7 +15,7 @@ import scala.util.{Failure, Success, Try}
 class Config(val source:URL, val config:com.typesafe.config.Config) {
   private[this] val logger = LoggerFactory.getLogger(getClass)
 
-  private[this] def _get[T](key:String, default: => T)(implicit converter:(String) => Either[String, T]):T = {
+  private[this] def _get[T](key:String, default: => T)(implicit converter:String => Either[String, T]):T = {
     Try(config.getString(s"$key")).toOption match {
       case Some(value) =>
         converter(value) match {
@@ -32,6 +32,34 @@ class Config(val source:URL, val config:com.typesafe.config.Config) {
     }
   }
 
+  private[this] def _getArray[T](key:String, default: => T)(implicit converter:String => Either[String, T]):Seq[T] = {
+    Try(config.getStringList(key)).toOption match {
+      case Some(list) =>
+        val converted = list.asScala.map(value => converter(value))
+        val results = list.asScala.map { value =>
+          converter(value) match {
+            case Right(result) =>
+              logger.debug(s"$key = $result")
+              result
+            case Left(message) =>
+              logger.warn(s"$key = $value; $message (apply $default)")
+              default
+          }
+        }
+        val log:String => Unit = if(converted.exists(_.isLeft)) logger.warn else logger.debug
+        log(s"$key = ${
+          results.zip(converted).zip(list.asScala).map {
+            case ((result, Right(_)), _) => s"$result"
+            case ((result, Left(message)), value) => s"$value; $message (apply $result)"
+          }.mkString("[", ", ", "]")
+        }")
+        results
+      case None =>
+        logger.debug(s"$key = [] (default)")
+        Seq.empty
+    }
+  }
+
   private[this] def getMap(key:String):Map[String, String] = Try(config.getConfig(key)).toOption.map { cs =>
     cs.entrySet().asScala.map(x => x.getKey).toSeq.map { name =>
       (ConfigUtil.splitPath(name).get(0), cs.getString(name))
@@ -44,34 +72,38 @@ class Config(val source:URL, val config:com.typesafe.config.Config) {
     } else new File(".")).getAbsoluteFile.toPath.resolve(path).toFile
   }
 
-  private[this] class ExceptableConverter[T](converter:(String) => T) extends Function[String, Either[String, T]] {
+  private[this] class ExceptableConverter[T](converter:String => T) extends Function[String, Either[String, T]] {
     override def apply(value:String):Either[String, T] = Try(converter(value)) match {
       case Success(result) => Right(result)
       case Failure(ex) => Left(ex.toString)
     }
   }
 
-  private[this] implicit val _StringConverter = { value:String => Right(value) }
+  private[this] implicit val _StringConverter:String => Right[Nothing, String] = { value:String => Right(value) }
+
+  private[this] implicit object _BooleanConverter extends ExceptableConverter[Boolean](_.toBoolean)
 
   private[this] implicit object _IntConverter extends ExceptableConverter[Int](_.toInt)
 
   private[this] implicit object _LongConverter extends ExceptableConverter[Long](_.toLong)
 
-  private[this] implicit val _StorageUnitConverter = Config.storageSize _
+  private[this] implicit val _StorageUnitConverter:String => Either[String, StorageUnit] = Config.storageSize
 
   object server {
-    private[this] def get[T](key:String, default:T)(implicit converter:(String) => Either[String, T]):T = _get[T](s"server.$key", default)(converter)
+    private[this] def get[T](key:String, default:T)(implicit converter:String => Either[String, T]):T = _get[T](s"server.$key", default)(converter)
+
+    val DefaultPort = 8089
 
     val requestTimeout:Long = get("request-timeout", 30) * 1000L
     val compressionLevel:Int = get("compression-level", 0)
     val maxRequestSize:StorageUnit = get("max-request-size", StorageUnit.fromKilobytes(500))
-    val bindAddress:InetSocketAddress = get("bind-address", new InetSocketAddress(80)) { value:String =>
+    val bindAddress:InetSocketAddress = get("bind-address", new InetSocketAddress(DefaultPort)) { value:String =>
       val HostPort = "(.*):(\\d+)".r
       try {
         value match {
           case HostPort("*", port) => Right(new InetSocketAddress(port.toInt))
           case HostPort(host, port) => Right(new InetSocketAddress(host, port.toInt))
-          case host => Right(new InetSocketAddress(host, 80))
+          case host => Right(new InetSocketAddress(host, DefaultPort))
         }
       } catch {
         case _:NumberFormatException => Left(s"invalid port number")
@@ -82,15 +114,38 @@ class Config(val source:URL, val config:com.typesafe.config.Config) {
   }
 
   object template {
-    private[this] def get[T](key:String, default:T)(implicit converter:(String) => Either[String, T]):T = _get[T](s"template.$key", default)(converter)
+    private[this] def get[T](key:String, default:T)(implicit converter:String => Either[String, T]):T = _get[T](s"template.$key", default)(converter)
 
     val updateCheckInterval:Long = get("update-check-interval", 2) * 1000L
   }
 
-  object script {
-    private[this] def get[T](key:String, default:T)(implicit converter:(String) => Either[String, T]):T = _get[T](s"script.$key", default)(converter)
+  /**
+    * 外部実行スクリプトの設定。
+    */
+  object cgi {
+    private[this] def get[T](key:String, default:T)(implicit converter:String => Either[String, T]):T = _get[T](s"cgi.$key", default)(converter)
 
-    private[this] def getArray[T](key:String, default:String)(implicit converter:(String) => Either[String, T]):Seq[T] = {
+    val enabled:Boolean = get("enabled", false)
+    val timeout:Long = get("timeout", 10 * 1000L)
+    val prefix:String = get("prefix", "/api/")
+    val interpreters:Map[String, String] = {
+      val result = Try(config.getList("cgi.interpreters")).toOption.map { list =>
+        list.iterator().asScala.collect { case intr:ConfigList if intr.size() == 2 =>
+          val interpreter = intr.get(0).unwrapped().toString
+          intr.get(1).unwrapped().toString.split(",").map(_.trim()).filter(_.nonEmpty).map { ext =>
+            ext -> interpreter
+          }
+        }.flatten.toMap
+      }.getOrElse(Map.empty)
+      logger.debug(s"cgi.interpreters = $result")
+      result
+    }
+  }
+
+  object script {
+    private[this] def get[T](key:String, default:T)(implicit converter:String => Either[String, T]):T = _get[T](s"script.$key", default)(converter)
+
+    private[this] def getArray[T](key:String, default:String)(implicit converter:String => Either[String, T]):Seq[T] = {
       get(key, default).split(",").filter(_.nonEmpty).map(converter).collect { case Right(value) => value }
     }
 

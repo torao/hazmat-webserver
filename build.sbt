@@ -1,16 +1,16 @@
-name := "webserver"
-
 organization := "at.hazm"
 
-version := "1.0.3"
+name := "hazmat-webserver"
 
-scalaVersion := "2.12.5"
+version := "1.1.0"
+
+scalaVersion := "2.12.6"
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
 
 scalacOptions in Test ++= Seq("-Yrangepos" /* for Specs2 */)
 
-javacOptions ++= Seq("-source", "1.9", "-target", "1.9")
+javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
 
 libraryDependencies ++= Seq(
   "org.scala-lang.modules" %% "scala-xml" % "1.0.+",
@@ -26,25 +26,30 @@ libraryDependencies ++= Seq(
 
 // Docker image and executable shell archive settings
 // ClasspathJarPlugin is for long-classpath on windows
-enablePlugins(JavaServerAppPackaging, UniversalPlugin, DockerPlugin, ClasspathJarPlugin)
+enablePlugins(JavaServerAppPackaging, UniversalPlugin /*, DockerPlugin*/, ClasspathJarPlugin)
 
-dockerBaseImage in Docker := "java:8-jdk-alpine"
+// Java の Alpine Linux で apk が使えないようなので Debian 版に変更
+// dockerBaseImage in Docker := "java:8-jdk-alpine"
+// dockerBaseImage in Docker := "java:8"
 
 // version in Docker := new java.text.SimpleDateFormat("yyyyMMddHHmm").format(new java.util.Date())
 version in Docker := "latest"
 // version in Docker := version.value
 
-maintainer in Docker := "TAKAMI Torao <koiroha@mail.com>"
+// maintainer in Docker := "TAKAMI Torao <koiroha@mail.com>"
 
-packageName in Docker := "torao/hazmat-webserver"
+// packageName in Docker := "torao/hazmat-webserver"
 
-dockerExposedPorts in Docker := Seq(8089, 80)
+// dockerExposedPorts in Docker := Seq(8089, 8089)
 
-dockerUpdateLatest in Docker := true
+// dockerUpdateLatest in Docker := true
 
 dockerRepository in Docker := Some("torao/hazmat-webserver")
 
 // import com.typesafe.sbt.packager.docker._
-// dockerCommands ++= Seq(
-//   ExecCmd("RUN", "apk", "add", "--update", "nodejs", "nodejs-npm")
-// )
+//dockerCommands ++= Seq(
+//  Cmd("RUN", "curl", "-sL", "https://deb.nodesource.com/setup_10.x", "|", "bash", "-"),
+//  ExecCmd("RUN", "apt-get", "update"),
+//  ExecCmd("RUN", "apt-get", "install", "-y", "nodejs", "build-essential", "python3-pip", "libssl-dev", "libffi-dev", "python-dev"),
+//  ExecCmd("RUN", "apt-get", "clean")
+//)
