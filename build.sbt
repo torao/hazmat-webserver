@@ -33,7 +33,7 @@ enablePlugins(JavaServerAppPackaging, UniversalPlugin /*, DockerPlugin*/, Classp
 // dockerBaseImage in Docker := "java:8"
 
 // version in Docker := new java.text.SimpleDateFormat("yyyyMMddHHmm").format(new java.util.Date())
-// version in Docker := "latest"
+version in Docker := "latest"
 // version in Docker := version.value
 
 // maintainer in Docker := "TAKAMI Torao <koiroha@mail.com>"
@@ -44,7 +44,7 @@ enablePlugins(JavaServerAppPackaging, UniversalPlugin /*, DockerPlugin*/, Classp
 
 // dockerUpdateLatest in Docker := true
 
-// dockerRepository in Docker := Some("torao/hazmat-webserver")
+dockerRepository in Docker := Some("torao/hazmat-webserver")
 
 // import com.typesafe.sbt.packager.docker._
 //dockerCommands ++= Seq(
