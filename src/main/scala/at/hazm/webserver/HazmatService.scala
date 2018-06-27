@@ -25,14 +25,17 @@ class HazmatService(context:Context) extends TFService[Request, Response] {
   private[this] val serverConfig = context.config.server.get
 
   /** 非同期で実行するリクエストハンドラ */
-  private[this] val asyncHandlers = if(serverConfig.cgi.enabled) {
-    Seq(new CommandHandler(context.docroot.toPath, serverConfig.cgi.timeout, serverConfig.cgi.prefix, serverConfig.cgi.interpreters))
-  } else {
-    Seq.empty
-  } ++ Seq(
-    new JavaHandler(context.docroot.toPath, serverConfig.script.timeout, serverConfig.script.javaExtensions, serverConfig.script.libs(context.dir)),
-    new ScriptHandler(context.docroot.toPath, serverConfig.script.timeout, serverConfig.script.extensions, serverConfig.script.libs(context.dir))
-  )
+  private[this] val asyncHandlers = {
+    val shell = if(serverConfig.cgi.enabled) {
+      Seq(new CommandHandler(context.docroot.toPath, serverConfig.cgi.timeout, serverConfig.cgi.prefix, serverConfig.cgi.interpreters))
+    } else {
+      Seq.empty
+    }
+    shell ++ Seq(
+      new JavaHandler(context.docroot.toPath, serverConfig.script.timeout, serverConfig.script.javaExtensions, serverConfig.script.libs(context.dir)),
+      new ScriptHandler(context.docroot.toPath, serverConfig.script.timeout, serverConfig.script.extensions, serverConfig.script.libs(context.dir))
+    )
+  }
 
   /** 同期で実行するリクエストハンドラ。 */
   private[this] val handlers = Seq(
