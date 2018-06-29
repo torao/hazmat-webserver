@@ -26,4 +26,4 @@ libraryDependencies ++= Seq(
 
 // Docker image and executable shell archive settings
 // ClasspathJarPlugin is for long-classpath on windows
-enablePlugins(JavaServerAppPackaging, UniversalPlugin)
+enablePlugins(JavaServerAppPackaging, UniversalPlugin, ClasspathJarPlugin)
