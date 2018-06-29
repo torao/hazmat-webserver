@@ -14,7 +14,7 @@ import at.hazm.webserver.{Dependency, TemplateEngine}
 class XSLTEngine(dir:File, docroot:File) extends TemplateEngine {
 
   private[this] val processors = List[DocumentProcessor](
-    new ScriptProcessor(new File(dir, "scripts/"), docroot),
+    new ScriptProcessor(new File(dir, "scripts/xslt-postprocess"), docroot),
     new PrettifyProcessor()
   )
 
