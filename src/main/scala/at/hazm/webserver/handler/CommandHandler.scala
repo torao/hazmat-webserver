@@ -13,8 +13,8 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import scala.annotation.tailrec
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
 import scala.util.matching.Regex
+import scala.util.{Failure, Try}
 
 /**
   * docroot 上の特定のディレクトリに配置されているコマンドをサーバサイドで実行するためのリクエストハンドラです。
@@ -145,13 +145,18 @@ class CommandHandler(docroot:Path, timeout:Long, prefix:String, interpreters:Map
     */
   private[this] def pipeResponse(request:Request, is:InputStream):Response = {
     val in = new PushbackInputStream(is)
-    readHeader(in).map { case (version, status, headers) =>
-      val reader = Reader.fromStream(in)
-      val response = Response(version, status, reader)
-      headers.foreach { case (name, value) =>
-        response.headerMap.add(name, value)
-      }
-      response
+    readHeader(in).flatMap { case (version, status, headers) =>
+      Try {
+        val reader = Reader.fromStream(in)
+        val response = Response(version, status, reader)
+        headers.foreach { case (name, value) =>
+          response.headerMap.add(name, value)
+        }
+        response
+      }.recoverWith { case ex =>
+        logger.error(s"invalid response header from script: $version $status $headers; ${request.uri}", ex)
+        Failure(ex)
+      }.toOption
     }.getOrElse(getErrorResponse(request, Status.InternalServerError))
   }
 
