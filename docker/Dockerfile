@@ -23,6 +23,7 @@ RUN cd /opt/webserver && unzip hazmat-webserver-1.1.1.zip && mv hazmat-webserver
 COPY bootstrap.sh /opt/webserver/bin
 WORKDIR /opt/webserver
 ENTRYPOINT ["/opt/webserver/bin/bootstrap.sh"]
+CMD ["/opt/site"]
 
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
 ENV PATH $JAVA_HOME/bin:$PATH
