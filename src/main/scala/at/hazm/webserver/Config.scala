@@ -6,8 +6,9 @@ import java.nio.charset.StandardCharsets
 import java.util.regex.Pattern
 
 import com.twitter.util.StorageUnit
-import com.typesafe.config.{ConfigFactory, ConfigList, ConfigRenderOptions, ConfigUtil}
+import com.typesafe.config._
 import org.slf4j.LoggerFactory
+import play.api.libs.json.{JsObject, JsString, Json}
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
@@ -120,6 +121,25 @@ class Config(val source:URL, val config:com.typesafe.config.Config) {
   }
 
   /**
+    * 外部コマンド/シェルスクリプト実行環境の設定。
+    */
+  object shell {
+
+    /** Map[ドット付き拡張子, インタープリタ] */
+    val interpreters:Map[String, String] = {
+      val result = Try(config.getObject("shell.interpreters")).toOption.map { obj =>
+        obj.entrySet().asScala.collect {
+          case e if e.getValue.valueType() == ConfigValueType.STRING =>
+            (e.getKey, e.getValue.unwrapped().toString)
+        }.toMap
+      }.getOrElse(Map.empty)
+      logger.debug(s"shell.interpreters = ${Json.stringify(JsObject(result.mapValues(s => JsString(s))))}")
+      result
+    }
+
+  }
+
+  /**
     * 外部実行スクリプトの設定。
     */
   object cgi {
@@ -128,18 +148,6 @@ class Config(val source:URL, val config:com.typesafe.config.Config) {
     val enabled:Boolean = get("enabled", false)
     val timeout:Long = get("timeout", 10 * 1000L)
     val prefix:String = get("prefix", "/api/")
-    val interpreters:Map[String, String] = {
-      val result = Try(config.getList("cgi.interpreters")).toOption.map { list =>
-        list.iterator().asScala.collect { case intr:ConfigList if intr.size() == 2 =>
-          val interpreter = intr.get(0).unwrapped().toString
-          intr.get(1).unwrapped().toString.split(",").map(_.trim()).filter(_.nonEmpty).map { ext =>
-            ext -> interpreter
-          }
-        }.flatten.toMap
-      }.getOrElse(Map.empty)
-      logger.debug(s"cgi.interpreters = $result")
-      result
-    }
   }
 
   object script {
