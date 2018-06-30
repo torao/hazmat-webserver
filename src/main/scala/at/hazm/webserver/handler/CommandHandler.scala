@@ -12,9 +12,9 @@ import com.twitter.io.{Bufs, Reader}
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.annotation.tailrec
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.matching.Regex
-import scala.util.{Failure, Try}
+import scala.util.{Failure, Success, Try}
 
 /**
   * docroot 上の特定のディレクトリに配置されているコマンドをサーバサイドで実行するためのリクエストハンドラです。
@@ -98,17 +98,27 @@ class CommandHandler(docroot:Path, timeout:Long, prefix:String, interpreters:Map
 
     def error(status:Status) = getErrorResponse(request, status)
 
+    case class GatewayTimeout() extends Exception
+
     Server.scheduler.runWithTimeout(limitTime, { _ =>
-      logger.warn(f"${request.path}: ${System.currentTimeMillis() - start}%,dms => start timeout")
-      Future.successful(Future.successful(error(Status.GatewayTimeout)))
+      Future.failed(GatewayTimeout())
     }) {
-      // コマンド起動
-      Try(builder.start()).map { proc =>
+      Try(builder.start())
+    }.flatMap {
+      case Failure(_:GatewayTimeout) =>
+        logger.warn(f"${request.path}: ${System.currentTimeMillis() - start}%,dms => start timeout")
+        Future.successful(error(Status.GatewayTimeout))
+      case Failure(ex) =>
+        logger.error(f"${request.path}: ${System.currentTimeMillis() - start}%,dms => error", ex)
+        Future.successful(error(Status.InternalServerError))
+      case Success(proc) =>
         // コマンド実行
+        val promise = Promise[Response]()
         Server.scheduler.runWithTimeout(limitTime, { _ =>
           logger.warn(f"${request.path}: ${System.currentTimeMillis() - start}%,dms => execution timeout")
+          promise.success(error(Status.GatewayTimeout))
           proc.destroyForcibly()
-          Future.successful(error(Status.GatewayTimeout))
+          Future.unit
         }) {
           try {
             // リクエストボディを標準入力経由でコマンドに渡す
@@ -118,22 +128,23 @@ class CommandHandler(docroot:Path, timeout:Long, prefix:String, interpreters:Map
               out.flush()
             }
             val response = pipeResponse(request, proc.getInputStream)
-            if(logger.isDebugEnabled) {
-              val tm = System.currentTimeMillis() - start
-              logger.debug(f"${request.path}%s: $tm%,dms => ${response.status.code} ${response.status.reason}")
+            if(!promise.isCompleted) {
+              if(logger.isDebugEnabled) {
+                val tm = System.currentTimeMillis() - start
+                logger.debug(f"${request.path}%s: $tm%,dms => ${response.status.code} ${response.status.reason}")
+              }
+              promise.success(response)
             }
-            response
           } catch {
             case ex:Throwable =>
               logger.error(s"fail to execute external command: $file", ex)
-              error(Status.InternalServerError)
+              if(!promise.isCompleted) {
+                promise.success(error(Status.InternalServerError))
+              }
           }
         }
-      }.recover { case ex =>
-        logger.error(s"fail to start external command: $file", ex)
-        Future.successful(error(Status.InternalServerError))
-      }.get
-    }.flatten
+        promise.future
+    }
   }
 
   /**
