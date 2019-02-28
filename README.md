@@ -1,6 +1,6 @@
 # HazMat Web Server
 
-Asynchronous Templates & API Scripting HTTP Server for http://hazm.at/, so called Static Site Generator
+Asynchronous HTTP Server with Templates & API Scripting Engine for https://hazm.at/, so called Static Site Generator with on demand.
 
 ## Quick Start
 
@@ -27,8 +27,8 @@ $ curl http://localhost:8088/index.html
 
 ## Introduction
 
-HazMat Web Server はテンプレートエンジンと API スクリプティングのみに特化した Web サーバ (静的サイトジェネレータ) だ。
-どこかのインディアン Web サーバじゃねえし、赤錆びた線路みたいなフルスタック Web フレームワークでもねえ。
+HazMat Web Server はテンプレートエンジンと API スクリプティングのみに特化した Web サーバ (オンデマンドで生成する静的サイトジェネレータ)。
+どこぞのインディアン Web サーバじゃねえし、赤錆びたフルスタック Web フレームワークでもねえ。
 その中間を埋めるサーバだ。
 
 メテーのサイトを構築するのにタダの HTTP サーバに静的なコンテンツじゃページごとのレイアウトを統一的に管理できなくて超不便じゃん?
