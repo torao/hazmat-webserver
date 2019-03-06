@@ -1,12 +1,15 @@
 package at.hazm.webserver
 
 import java.io._
+import java.util.ServiceLoader
 import java.util.concurrent.ConcurrentHashMap
+import scala.collection.JavaConverters._
 
 import at.hazm.using
 import org.slf4j.LoggerFactory
 
 trait TemplateEngine {
+
   /**
     * このテンプレートエンジンが変換可能な拡張子のマップ。例えば SVG ファイルから PNG ファイルに変換するテンプレートエンジンの場合、
     * `svg` -> `png` のエントリを持つ。
@@ -16,6 +19,8 @@ trait TemplateEngine {
   def extensionMap:Map[String, String]
 
   def transform(file:File, in:InputStream, out:OutputStream, param: => Map[String, String]):Dependency
+
+  def setRoot(dir:File):Unit = None
 }
 
 object TemplateEngine {
@@ -26,7 +31,14 @@ object TemplateEngine {
     var dependency:Option[Dependency] = None
   }
 
-  class Manager(docroot:File, interval:Long, engines:TemplateEngine*) {
+  class Manager(root:File, interval:Long) {
+    private[this] val docroot = new File(root, "docroot").getCanonicalFile
+
+    private[this] val engines = ServiceLoader.load(classOf[TemplateEngine]).asScala.map{ sp =>
+      sp.setRoot(root)
+      logger.debug(s"using template engine: ${sp.getClass.getSimpleName}")
+      sp
+    }
 
     /** テンプレート適用のメタ情報をメモリ上に保持するためのマップ。 */
     private[this] val meta = new ConcurrentHashMap[File, MetaInfo]()

@@ -8,19 +8,20 @@ import at.hazm.webserver.{Dependency, TemplateEngine}
 
 /**
   * XML ファイルに XSL を適用するテンプレートエンジンです。
-  *
-  * @param dir サイトのルートディレクトリ
   */
-class XSLTEngine(dir:File, docroot:File) extends TemplateEngine {
+class XSLTEngine extends TemplateEngine {
+  private[this] var processors: List[DocumentProcessor] = List.empty
 
-  private[this] val processors = List[DocumentProcessor](
-    new ScriptProcessor(new File(dir, "scripts/xslt-postprocess"), docroot),
-    new PrettifyProcessor()
-  )
+  override def setRoot(root: File): Unit = {
+    this.processors = List[DocumentProcessor](
+      new ScriptProcessor(new File(root, "scripts/xslt-postprocess").getCanonicalFile, new File(root, "docroot").getCanonicalFile),
+      new PrettifyProcessor()
+    )
+  }
 
-  override def extensionMap:Map[String, String] = Map("xml" -> "html", "xhtml" -> "html")
+  override def extensionMap: Map[String, String] = Map("xml" -> "html", "xhtml" -> "html")
 
-  override def transform(file:File, in:InputStream, out:OutputStream, param: => Map[String, String]):Dependency = {
+  override def transform(file: File, in: InputStream, out: OutputStream, param: => Map[String, String]): Dependency = {
 
     // XSL を適用した DOM をロード
     val (doc, dependency) = XMLLoader.load(in, file.toURI.toURL, param)

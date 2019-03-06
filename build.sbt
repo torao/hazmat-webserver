@@ -2,9 +2,9 @@ organization := "at.hazm"
 
 name := "hazmat-webserver"
 
-version := "1.1.1"
+version := "1.2.0"
 
-scalaVersion := "2.12.6"
+scalaVersion := "2.12.8"
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
 

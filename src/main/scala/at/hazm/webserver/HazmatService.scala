@@ -6,7 +6,7 @@ import java.util.concurrent.Executors
 
 import at.hazm.on
 import at.hazm.webserver.handler._
-import at.hazm.webserver.templates.{SASSEngine, SVGEngine, TypeScriptEngine, XSLTEngine}
+import at.hazm.webserver.templates.XSLTEngine
 import com.twitter.finagle.http._
 import com.twitter.finagle.{Service => TFService}
 import com.twitter.io.{Bufs, Reader}
@@ -15,8 +15,8 @@ import com.twitter.util.{Future, Promise}
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future => SFuture}
 import scala.util.{Failure, Success}
 
-class HazmatService(context:Context) extends TFService[Request, Response] {
-  private[this] implicit val _context:ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newCachedThreadPool((r:Runnable) => {
+class HazmatService(context: Context) extends TFService[Request, Response] {
+  private[this] implicit val _context: ExecutionContextExecutor = ExecutionContext.fromExecutor(Executors.newCachedThreadPool((r: Runnable) => {
     val t = new Thread(r, "HazMat")
     t.setDaemon(true)
     t
@@ -26,7 +26,7 @@ class HazmatService(context:Context) extends TFService[Request, Response] {
 
   /** 非同期で実行するリクエストハンドラ */
   private[this] val asyncHandlers = {
-    val shell = if(serverConfig.cgi.enabled) {
+    val shell = if (serverConfig.cgi.enabled) {
       Seq(new CommandHandler(context.docroot.toPath, serverConfig.cgi.timeout, serverConfig.cgi.prefix, serverConfig.shell.interpreters))
     } else {
       Seq.empty
@@ -41,18 +41,19 @@ class HazmatService(context:Context) extends TFService[Request, Response] {
   private[this] val handlers = Seq(
     new RedirectHandler(context.docroot.toPath, context.config.server),
     new TemplateHandler(context.docroot.toPath, context.cache.toPath, context.config.mime,
-      new TemplateEngine.Manager(context.docroot, serverConfig.template.updateCheckInterval,
-        new XSLTEngine(context.dir, context.docroot), new SASSEngine(), new TypeScriptEngine(), new SVGEngine())
+      new TemplateEngine.Manager(context.docroot, serverConfig.template.updateCheckInterval)
     ),
     new FileHandler(context.docroot.toPath, serverConfig.server.sendBufferSize, context.config.mime)
   )
 
   (asyncHandlers ++ handlers).foreach { h =>
+    val xslt = new XSLTEngine()
+    xslt.setRoot(context.dir)
     h.config_=(context.config.server)
-    h.errorTemplateEngine_=(new XSLTEngine(context.dir, context.docroot))
+    h.errorTemplateEngine_=(xslt)
   }
 
-  def apply(request:Request):Future[Response] = {
+  def apply(request: Request): Future[Response] = {
     val promise = Promise[Response]()
     SFuture.sequence(asyncHandlers.map(_.applyAsync(request))).map(_.flatten.headOption).map {
       case Some(res) => res
@@ -62,9 +63,9 @@ class HazmatService(context:Context) extends TFService[Request, Response] {
             Response(Version.Http11, Status.NotFound)
           }
         } catch {
-          case ex:Throwable =>
+          case ex: Throwable =>
             context.report(s"unexpected error: ${request.proxiedRemoteHost}: ${request.method.name} ${request.uri}${request.userAgent.map { ua => s": $ua" }.getOrElse("")}", ex)
-            on(Response(Version.Http11, Status.InternalServerError, Reader.fromBuf(Bufs.sharedBuf(serverError:_*)))) { res =>
+            on(Response(Version.Http11, Status.InternalServerError, Reader.fromBuf(Bufs.sharedBuf(serverError: _*)))) { res =>
               res.cacheControl = "no-cache"
               res.contentType = "text/html; charset=UTF-8"
             }
