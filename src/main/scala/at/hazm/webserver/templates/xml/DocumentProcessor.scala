@@ -10,4 +10,5 @@ import org.w3c.dom.Document
   */
 trait DocumentProcessor {
   def process(doc:Document, location:File):Dependency
+  def setRoot(root:File):Unit = None
 }

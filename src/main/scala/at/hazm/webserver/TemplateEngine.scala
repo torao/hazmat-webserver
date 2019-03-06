@@ -8,13 +8,14 @@ import scala.collection.JavaConverters._
 import at.hazm.using
 import org.slf4j.LoggerFactory
 
+/**
+  * テンプレートエンジンはリクエストされたファイル拡張子に基づいてその内容を変換する処理を行います。
+  */
 trait TemplateEngine {
 
   /**
-    * このテンプレートエンジンが変換可能な拡張子のマップ。例えば SVG ファイルから PNG ファイルに変換するテンプレートエンジンの場合、
-    * `svg` -> `png` のエントリを持つ。
-    *
-    * @return
+    * このテンプレートエンジンが変換可能な拡張子のマップ。例えば SVG ファイルから PNG ファイルに変換するテンプレート
+    * エンジンの場合 `svg` -> `png` のエントリを持つ。
     */
   def extensionMap:Map[String, String]
 
@@ -32,7 +33,7 @@ object TemplateEngine {
   }
 
   class Manager(root:File, interval:Long) {
-    private[this] val docroot = new File(root, "docroot").getCanonicalFile
+    private[this] val docroot = Context.docroot(root)
 
     private[this] val engines = ServiceLoader.load(classOf[TemplateEngine]).asScala.map{ sp =>
       sp.setRoot(root)

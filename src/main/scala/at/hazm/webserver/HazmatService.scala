@@ -41,7 +41,7 @@ class HazmatService(context: Context) extends TFService[Request, Response] {
   private[this] val handlers = Seq(
     new RedirectHandler(context.docroot.toPath, context.config.server),
     new TemplateHandler(context.docroot.toPath, context.cache.toPath, context.config.mime,
-      new TemplateEngine.Manager(context.docroot, serverConfig.template.updateCheckInterval)
+      new TemplateEngine.Manager(context.dir, serverConfig.template.updateCheckInterval)
     ),
     new FileHandler(context.docroot.toPath, serverConfig.server.sendBufferSize, context.config.mime)
   )

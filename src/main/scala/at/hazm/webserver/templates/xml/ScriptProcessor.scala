@@ -3,19 +3,27 @@ package at.hazm.webserver.templates.xml
 import java.io._
 import java.net.URI
 import java.nio.charset.StandardCharsets
+
 import javax.script.{ScriptEngine, ScriptEngineManager}
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.xpath.{XPathConstants, XPathFactory}
-
 import at.hazm.using
-import at.hazm.webserver.Dependency
+import at.hazm.webserver.{Context, Dependency}
 import jdk.nashorn.api.scripting.ScriptObjectMirror
 import org.slf4j.LoggerFactory
 import org.w3c.dom.{Document, Element, Node, NodeList}
 
 import scala.collection.mutable
 
-class ScriptProcessor(scripts:File, docroot:File) extends DocumentProcessor {
+class ScriptProcessor extends DocumentProcessor {
+
+  private[this] var scripts:File = _
+  private[this] var docroot:File = _
+
+  override def setRoot(root:File):Unit ={
+    this.scripts = new File(root, "scripts/xslt-postprocess").getCanonicalFile
+    this.docroot = Context.docroot(root)
+  }
 
   override def process(doc:Document, location:File):Dependency = {
     val dep = if(scripts.isDirectory) {
