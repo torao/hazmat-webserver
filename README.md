@@ -27,10 +27,9 @@ $ curl http://localhost:8088/index.html
 
 ## Introduction
 
-HazMat Web Server はテンプレートエンジンと API スクリプティングのみに特化した Web サーバ (オンデマンドで生成する静的サイトジェネレータ)。
-どこぞのインディアン Web サーバじゃねえし、赤錆びたフルスタック Web フレームワークでもねえ。
-その中間を埋めるサーバだ。
+HazMat Web Server はテンプレートエンジンと API スクリプティングの機能を持った Web サーバ。オンデマンドで静的コンテンツを生成する。Apache のような静的な Web サーバと Ruby on Rails のような鈍重なフルスタックフレームワークの中間を埋めることを目的としている。
 
+このサーバは静的コンテンツのレイアウトを統一的に管理することを目的としている。
 メテーのサイトを構築するのにタダの HTTP サーバに静的なコンテンツじゃページごとのレイアウトを統一的に管理できなくて超不便じゃん?
 CMS は便利だがスキームがブログや Wiki なんかに特化してるんで THE 俺様ホームページ向けではないしな。
 かといってフルスタック Web フレームワークを持ち込んでも大ナタも甚だしいだろ。
@@ -345,6 +344,22 @@ retrieveManaged := true
   <message>エラーメッセージ</message>
 </error>
 ```
+
+## Service Provider Interface
+
+Java の SPI を使用してユーザサイトで変換処理を追加することができる。
+
+### Template Engine
+
+テンプレートエンジンはあるファイルの内容を変換するための実装である。例えば SVG として保存されているファイルを PNG でリクエストできるようにすることができる。
+
+[`at.hazm.webserver.TemplateEngine`](src/main/scala/at/hazm/webserver/TemplateEngine.scala) トレイトを実装し、そのクラス名を `META-INF/services/at.hazm.webserver.TemplateEngine` に記述する。
+
+### Document Processor
+
+ドキュメントプロセッサは XSLT テンプレートエンジンによって生成された DOM を XML レベルで加工することを目的としている。
+
+[`at.hazm.webserver.templates.xml.DocumentProcessor`](src/main/scala/at/hazm/webserver/templates/xml/DocumentProcessor.scala) トレイトを実装し、そのクラス名を `META-INF/services/at.hazm.webserver.templates.xml.DocumentProcessor` に記述する。
 
 ## Docker
 

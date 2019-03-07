@@ -24,6 +24,8 @@ class HazmatService(context: Context) extends TFService[Request, Response] {
 
   private[this] val serverConfig = context.config.server.get
 
+  Thread.currentThread().setContextClassLoader(serverConfig.script.libs(context.dir))
+
   /** 非同期で実行するリクエストハンドラ */
   private[this] val asyncHandlers = {
     val shell = if (serverConfig.cgi.enabled) {
