@@ -13,20 +13,17 @@ RUN cd /usr/local/bin \
 &&  curl -sL https://deb.nodesource.com/setup_8.x | bash -
 
 WORKDIR /opt/webserver
-COPY hazmat-webserver-$VERSION.zip /opt/webserver
-COPY bootstrap.sh /opt/webserver/bin
-RUN chmod 755 /opt/webserver/bin/bootstrap.sh
-
-RUN mkdir -p /opt/site
-RUN mkdir -p /opt/webserver
-RUN cd /opt/webserver \
-&&  unzip hazmat-webserver-$VERSION.zip \
+COPY hazmat-webserver-$VERSION.zip ./
+RUN unzip hazmat-webserver-$VERSION.zip \
 &&  mv hazmat-webserver-$VERSION/* . \
 &&  rmdir hazmat-webserver-$VERSION \
 &&  rm hazmat-webserver-$VERSION.zip
+COPY bootstrap.sh ./bin/
+RUN chmod 755 ./bin/bootstrap.sh
 
 ENTRYPOINT ["/opt/webserver/bin/bootstrap.sh"]
 
+RUN mkdir -p /opt/site
 CMD ["/opt/site"]
 
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
