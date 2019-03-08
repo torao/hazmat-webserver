@@ -22,7 +22,7 @@ trait DocumentProcessor {
     context.getDependency
   }
 
-  def process(context: DocumentProcessor.Context): Unit
+  def process(context: DocumentProcessor.Context): Unit = None
 
   private[this] var root: File = _
   private[this] var docroot: File = _
