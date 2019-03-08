@@ -4,7 +4,7 @@ ARG VERSION
 
 RUN apt-get update \
 &&  apt-get upgrade -y \
-&&  apt-get install -y unzip curl build-essential openjdk-8-jdk nodejs python3-pip python3-dev \
+&&  apt-get install -y unzip curl build-essential openjdk-8-jdk nodejs python3-pip python3-dev graphviz \
 &&  apt-get clean
 
 RUN cd /usr/local/bin \
