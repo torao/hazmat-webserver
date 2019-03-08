@@ -23,7 +23,7 @@ bootstrap(){
 # bootstrap logging
 LOGDIR=$SITE/logs
 LOGFILE=$LOGDIR/bootstrap-`date "+%Y%m%d"`.log
-if [ -d $LOGDIR]
+if [ -d $LOGDIR ]
 then
   mkdir -p $LOGDIR
 fi
