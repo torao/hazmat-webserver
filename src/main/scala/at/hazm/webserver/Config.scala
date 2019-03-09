@@ -16,9 +16,9 @@ import scala.util.{Failure, Success, Try}
 class Config(val source:URL, val config:com.typesafe.config.Config) {
   private[this] val logger = LoggerFactory.getLogger(getClass)
 
-  private[this] def _get[T](key:String, default: => T)(implicit converter:String => Either[String, T]):T = {
-    Try(config.getString(s"$key")).toOption match {
-      case Some(value) =>
+  private[this] def getByFQN[T](key:String, default: => T)(implicit converter:String => Either[String, T]):T = {
+    Try(config.getString(key)) match {
+      case Success(value) =>
         converter(value) match {
           case Right(result) =>
             logger.debug(s"$key = $result")
@@ -27,15 +27,15 @@ class Config(val source:URL, val config:com.typesafe.config.Config) {
             logger.warn(s"$key = $value; $message (apply $default)")
             default
         }
-      case None =>
-        logger.debug(s"$key = $default (default)")
+      case Failure(ex) =>
+        logger.debug(s"$key = '$default' (default); $ex")
         default
     }
   }
 
-  private[this] def _getArray[T](key:String, default: => T)(implicit converter:String => Either[String, T]):Seq[T] = {
-    Try(config.getStringList(key)).toOption match {
-      case Some(list) =>
+  private[this] def getArrayByFQN[T](key:String, default: => T)(implicit converter:String => Either[String, T]):Seq[T] = {
+    Try(config.getStringList(key)) match {
+      case Success(list) =>
         val converted = list.asScala.map(value => converter(value))
         val results = list.asScala.map { value =>
           converter(value) match {
@@ -55,8 +55,8 @@ class Config(val source:URL, val config:com.typesafe.config.Config) {
           }.mkString("[", ", ", "]")
         }")
         results
-      case None =>
-        logger.debug(s"$key = [] (default)")
+      case Failure(ex) =>
+        logger.debug(s"$key = [] (default); $ex")
         Seq.empty
     }
   }
@@ -91,7 +91,7 @@ class Config(val source:URL, val config:com.typesafe.config.Config) {
   private[this] implicit val _StorageUnitConverter:String => Either[String, StorageUnit] = Config.storageSize
 
   object server {
-    private[this] def get[T](key:String, default:T)(implicit converter:String => Either[String, T]):T = _get[T](s"server.$key", default)(converter)
+    private[this] def get[T](key:String, default:T)(implicit converter:String => Either[String, T]):T = getByFQN[T](s"server.$key", default)(converter)
 
     val DefaultPort = 8089
 
@@ -115,7 +115,7 @@ class Config(val source:URL, val config:com.typesafe.config.Config) {
   }
 
   object template {
-    private[this] def get[T](key:String, default:T)(implicit converter:String => Either[String, T]):T = _get[T](s"template.$key", default)(converter)
+    private[this] def get[T](key:String, default:T)(implicit converter:String => Either[String, T]):T = getByFQN[T](s"template.$key", default)(converter)
 
     val updateCheckInterval:Long = get("update-check-interval", 2) * 1000L
   }
@@ -143,7 +143,7 @@ class Config(val source:URL, val config:com.typesafe.config.Config) {
     * 外部実行スクリプトの設定。
     */
   object cgi {
-    private[this] def get[T](key:String, default:T)(implicit converter:String => Either[String, T]):T = _get[T](s"cgi.$key", default)(converter)
+    private[this] def get[T](key:String, default:T)(implicit converter:String => Either[String, T]):T = getByFQN[T](s"cgi.$key", default)(converter)
 
     val enabled:Boolean = get("enabled", false)
     val timeout:Long = get("timeout", 10 * 1000L)
@@ -151,7 +151,9 @@ class Config(val source:URL, val config:com.typesafe.config.Config) {
   }
 
   object script {
-    private[this] def get[T](key:String, default:T)(implicit converter:String => Either[String, T]):T = _get[T](s"script.$key", default)(converter)
+    private[this] def fqn(key:String):String = s"script.$key"
+
+    private[this] def get[T](key:String, default:T)(implicit converter:String => Either[String, T]):T = getByFQN[T](fqn(key), default)(converter)
 
     private[this] def getArray[T](key:String, default:String)(implicit converter:String => Either[String, T]):Seq[T] = {
       get(key, default).split(",").filter(_.nonEmpty).map(converter).collect { case Right(value) => value }
@@ -163,7 +165,7 @@ class Config(val source:URL, val config:com.typesafe.config.Config) {
     val javaExtensions:Seq[String] = getArray("extensions-java", ".java")
 
     def libs(root:File):ClassLoader = {
-      val urls = get("libs", "").split(File.pathSeparatorChar).filter(_.nonEmpty).map { d =>
+      val urls = getArrayByFQN(fqn("libs"), "").filter(_.nonEmpty).map { d =>
         val dir = new File(d)
         if(dir.isAbsolute) dir else new File(root, d)
       }.flatMap { base =>
@@ -178,7 +180,7 @@ class Config(val source:URL, val config:com.typesafe.config.Config) {
           logger.warn(s"script library directory is not exist: ${base.getAbsolutePath}")
           Seq.empty
         }
-      }
+      }.toArray
       val defaultLoader = Thread.currentThread().getContextClassLoader
       if(urls.isEmpty) defaultLoader else new URLClassLoader(urls, defaultLoader)
     }

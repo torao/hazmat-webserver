@@ -165,7 +165,7 @@ class CommandHandler(docroot:Path, timeout:Long, prefix:String, interpreters:Map
         }
         response
       }.recoverWith { case ex =>
-        logger.error(s"invalid response header from script: $version $status $headers; ${request.uri}", ex)
+        logger.error(s"invalid response header from script: $version ${status.code} ${headers.seq.map(x => x._1 + ":" + x._2).mkString("[", ", ", "]")}; ${request.uri}", ex)
         Failure(ex)
       }.toOption
     }.getOrElse(getErrorResponse(request, Status.InternalServerError))
