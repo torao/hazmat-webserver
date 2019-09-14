@@ -72,7 +72,11 @@ class PrettifyProcessor extends DocumentProcessor {
   private[this] def concatJapanese(elem:Element):Unit = if(!ShouldIgnore.contains(elem.getTagName.toLowerCase)) {
     elem.getChildNodes.toList.collect { case t:Text => t }.foreach { t =>
       val org = t.getData
-      val buffer = new StringBuilder(org.replaceAll("\\s+", " ").replaceAll("([。、．，]) ", "$1"))
+      val buffer = new StringBuilder(org
+        .replaceAll("\\s+", " ")
+        .replaceAll("([。、．，」]) ", "$1")
+        .replaceAll(" ([「])", "$1")
+      )
 
       @tailrec
       def _replace(begin:Int):Unit = if(begin < buffer.length) {
@@ -96,6 +100,12 @@ class PrettifyProcessor extends DocumentProcessor {
     elem.getChildNodes.toList.collect { case t:Element => t }.foreach(concatJapanese)
   }
 
+  /**
+    * 指定された文字が日本語かを判定します。
+    *
+    * @param ch 判定する文字
+    * @return 日本語の場合 true
+    */
   private[this] def isJapanese(ch:Char):Boolean = {
     // CJK Symbols and Punctuation / Range: 3000–303F
     (ch >= 0x3000 && ch <= 0x303F) ||
