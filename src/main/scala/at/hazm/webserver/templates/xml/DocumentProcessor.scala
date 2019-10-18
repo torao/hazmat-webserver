@@ -41,7 +41,7 @@ trait DocumentProcessor {
 
 
 object DocumentProcessor {
-  private[this] val logger = LoggerFactory.getLogger(classOf[ScriptProcessor])
+  private[this] val logger = LoggerFactory.getLogger(classOf[DocumentProcessor])
   private[this] val XMLNS = "xmlns:(.*)".r
 
   /**

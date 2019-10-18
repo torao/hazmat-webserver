@@ -2,9 +2,6 @@ package at.hazm.webserver.handler
 
 import java.io._
 import java.nio.file.Path
-import javax.xml.transform.TransformerFactory
-import javax.xml.transform.dom.DOMSource
-import javax.xml.transform.stream.{StreamResult, StreamSource}
 
 import at.hazm.using
 import at.hazm.util.Cache
@@ -12,6 +9,9 @@ import at.hazm.util.XML._
 import at.hazm.webserver.{Config, TemplateEngine}
 import com.twitter.finagle.http.{Request, Response, Status, Version}
 import com.twitter.io.Reader
+import javax.xml.transform.TransformerFactory
+import javax.xml.transform.dom.DOMSource
+import javax.xml.transform.stream.{StreamResult, StreamSource}
 import org.slf4j.LoggerFactory
 import org.w3c.dom.Document
 
@@ -36,11 +36,11 @@ abstract class RequestHandler(docroot:Path) {
     val error = defaultErrorMessages.getOrElse(status.code, <html>
       <head>
         <title>
-          {status.code}{status.reason}
+          {s"${status.code} ${status.reason}"}
         </title>
       </head> <body>
         <h1>
-          {status.code}{status.reason}
+          {s"${status.code} ${status.reason}"}
         </h1> <p>
           {status.reason}
         </p>
@@ -157,12 +157,12 @@ object RequestHandler {
     <html>
       <head>
         <title>
-          {code}{phrase}
+          {s"$code $phrase"}
         </title>
       </head>
       <body>
         <h1>
-          {code}{phrase}
+          {s"$code $phrase"}
         </h1> <p>
         {message}
       </p>
