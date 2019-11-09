@@ -1,6 +1,6 @@
 package at.hazm.webserver.handler
 
-import java.io.{ByteArrayOutputStream, File, InputStream, PushbackInputStream}
+import java.io._
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 
@@ -61,7 +61,7 @@ class CommandHandler(docroot:Path, timeout:Long, prefix:String, interpreters:Map
     val builder = new ProcessBuilder()
       .command(interpreter, file.getName)
       .directory(file.getParentFile)
-      .redirectError(ProcessBuilder.Redirect.INHERIT)
+      .redirectError(ProcessBuilder.Redirect.PIPE)
       .redirectInput(ProcessBuilder.Redirect.PIPE)
       .redirectOutput(ProcessBuilder.Redirect.PIPE)
 
@@ -100,6 +100,16 @@ class CommandHandler(docroot:Path, timeout:Long, prefix:String, interpreters:Map
 
     case class GatewayTimeout() extends Exception
 
+    class ErrorReader(name:String, is:InputStream) extends Thread {
+      override def run():Unit = try {
+        val in = new BufferedReader(new InputStreamReader(is))
+        Iterator.continually(in.readLine()).takeWhile(_ != null).foreach(line => logger.warn(s"[$name] $line"))
+      } catch {
+        case ex:Throwable =>
+          logger.warn(s"while reading stderr of process: $name", ex)
+      }
+    }
+
     Server.scheduler.runWithTimeout(limitTime, { _ =>
       Future.failed(GatewayTimeout())
     }) {
@@ -121,6 +131,8 @@ class CommandHandler(docroot:Path, timeout:Long, prefix:String, interpreters:Map
           Future.unit
         }) {
           try {
+            new ErrorReader(interpreter, proc.getErrorStream).start()
+
             // リクエストボディを標準入力経由でコマンドに渡す
             if(pipeRequestBody) {
               val out = proc.getOutputStream
