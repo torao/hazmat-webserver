@@ -9,58 +9,105 @@ class PrettifyProcessor extends DocumentProcessor {
   /**
     * 内容を変更してはいけない要素 (小文字)。
     */
-  private[this] val ShouldIgnore = Set("pre", "script", "style", "textarea")
+  private[this] val ShouldIgnore = Set("pre", "script", "style", "textarea").map(_.toLowerCase)
 
   /**
     * ブロック (コンテナ) 型の要素 (小文字)。
     */
   private[this] val Container = Set(
-    "html", "head", "body", "nav", "footer", "div", "ul", "ol", "dl", "dd", "table", "tr", "thead", "tbody", "tfoot",
-    "form", "blockquote", "select")
+    "html", "head", "body", "nav", "article", "footer", "div", "ul", "ol", "dl", "table", "tr", "thead",
+    "tbody", "tfoot", "form", "blockquote", "select").map(_.toLowerCase)
 
-  override def process(context:DocumentProcessor.Context):Unit = {
+  /**
+    * 内容の前後に存在する空白文字を削除する要素。
+    */
+  private[this] val Trim = Set(
+    "p", "li", "h1", "h2", "h3", "h4", "h5", "h6", "caption", "figcaption"
+  ).map(_.toLowerCase)
+
+  override def process(context: DocumentProcessor.Context): Unit = {
     // doc.getDocumentElement.setAttribute("xmlns", "http://www.w3.org/1999/xhtml")
     concatJapanese(context.doc.getDocumentElement)
     setIndent(context.doc.getDocumentElement, 0)
     context.doc.foreach(_.removeAttribute("xmlns"))
   }
 
-  private[this] def setIndent(elem:Element, i:Int):Unit = {
+  private[this] def setIndent(elem: Element, i: Int): Unit = {
     // ノードの前方の空白を削除
-    def _removePrevSpace(node:Node):Unit = Option(node.getPreviousSibling) match {
-      case Some(prev:Text) if prev.getData.trim.isEmpty =>
+    @tailrec
+    def _removePrevSpace(node: Node): Unit = Option(node.getPreviousSibling) match {
+      case Some(prev: Text) if prev.getData.trim.isEmpty =>
         prev.getParentNode.removeChild(prev)
         _removePrevSpace(node)
       case _ => ()
     }
 
     // ノードの後方空白を削除
-    def _removePostSpace(node:Node):Unit = Option(node.getNextSibling) match {
-      case Some(next:Text) if next.getData.trim.isEmpty =>
+    @tailrec
+    def _removePostSpace(node: Node): Unit = Option(node.getNextSibling) match {
+      case Some(next: Text) if next.getData.trim.isEmpty =>
         next.getParentNode.removeChild(next)
         _removePostSpace(node)
       case _ => ()
     }
 
-    // コンテナ型要素であれば子のノードを縦に並べるインデントを追加
-    if(Container.contains(elem.getTagName.toLowerCase)) {
+    // ノードの前方空白を削除
+    @tailrec
+    def _trimPrefixedSpace(nodes: List[Node]): Unit = nodes.headOption.collect {
+      case t: Text => (t, t.getData, t.getData.dropWhile(Character.isWhitespace))
+    } match {
+      case Some((text, _, "")) =>
+        val parent = text.getParentNode
+        parent.removeChild(text)
+        _trimPrefixedSpace(nodes.drop(1))
+      case Some((text, t1, t2)) if t1.length != t2.length =>
+        val parent = text.getParentNode
+        val doc = text.getOwnerDocument
+        val newText = doc.createTextNode(t2)
+        parent.replaceChild(newText, text)
+      case _ => ()
+    }
+
+    // ノードの後方空白を削除
+    @tailrec
+    def _trimPostfixedSpace(nodes: List[Node]): Unit = nodes.lastOption.collect {
+      case t: Text => (t, t.getData, t.getData.reverse.dropWhile(Character.isWhitespace).reverse)
+    } match {
+      case Some((text, _, "")) =>
+        val parent = text.getParentNode
+        parent.removeChild(text)
+        _trimPostfixedSpace(nodes.dropRight(1))
+      case Some((text, t1, t2)) if t1.length != t2.length =>
+        val parent = text.getParentNode
+        val doc = text.getOwnerDocument
+        val newText = doc.createTextNode(t2)
+        parent.replaceChild(newText, text)
+      case _ => ()
+    }
+
+    if (Container.contains(elem.getTagName.toLowerCase)) {
+      // コンテナ型要素であれば子のノードを縦に並べるインデントを追加
       val doc = elem.getOwnerDocument
       elem.getChildNodes.toList.foreach { c =>
-        if(elem.getChildNodes.toList.contains(c)) {
+        if (elem.getChildNodes.toList.contains(c)) {
           _removePrevSpace(c)
           _removePostSpace(c)
           elem.insertBefore(doc.createTextNode("\n" + "  " * (i + 1)), c)
         }
       }
-      if(elem.getChildNodes.getLength > 0) {
+      if (elem.getChildNodes.getLength > 0) {
         elem.appendChild(doc.createTextNode("\n" + "  " * i))
       }
+    } else if (Trim.contains(elem.getTagName.toLowerCase)) {
+      // 要素が含む子ノードの前後空白を削除する
+      _trimPrefixedSpace(elem.getChildNodes.toList)
+      _trimPostfixedSpace(elem.getChildNodes.toList)
     }
 
     // 再帰的に実行
     // ※ JS による DOM 操作で NS 指定版を使わないと local-name が null になるがあるがそれは補助したい
-    if(!ShouldIgnore.contains(Option(elem.getLocalName).getOrElse(elem.getTagName).toLowerCase)) {
-      elem.getChildNodes.toList.collect { case e:Element => e }.foreach(e => setIndent(e, i + 1))
+    if (!ShouldIgnore.contains(Option(elem.getLocalName).getOrElse(elem.getTagName).toLowerCase)) {
+      elem.getChildNodes.toList.collect { case e: Element => e }.foreach(e => setIndent(e, i + 1))
     }
   }
 
@@ -69,8 +116,8 @@ class PrettifyProcessor extends DocumentProcessor {
     *
     * @param elem 日本語を連結する要素
     */
-  private[this] def concatJapanese(elem:Element):Unit = if(!ShouldIgnore.contains(elem.getTagName.toLowerCase)) {
-    elem.getChildNodes.toList.collect { case t:Text => t }.foreach { t =>
+  private[this] def concatJapanese(elem: Element): Unit = if (!ShouldIgnore.contains(elem.getTagName.toLowerCase)) {
+    elem.getChildNodes.toList.collect { case t: Text => t }.foreach { t =>
       val org = t.getData
       val buffer = new StringBuilder(org
         .replaceAll("\\s+", " ")
@@ -79,10 +126,10 @@ class PrettifyProcessor extends DocumentProcessor {
       )
 
       @tailrec
-      def _replace(begin:Int):Unit = if(begin < buffer.length) {
+      def _replace(begin: Int): Unit = if (begin < buffer.length) {
         val i = buffer.indexOf(' ', begin)
-        if(i >= 0) {
-          if(i - 1 >= 0 && isJapanese(buffer.charAt(i - 1)) && i + 1 < buffer.length && isJapanese(buffer.charAt(i + 1))) {
+        if (i >= 0) {
+          if (i - 1 >= 0 && isJapanese(buffer.charAt(i - 1)) && i + 1 < buffer.length && isJapanese(buffer.charAt(i + 1))) {
             buffer.deleteCharAt(i)
             _replace(i)
           } else _replace(i + 1)
@@ -92,12 +139,12 @@ class PrettifyProcessor extends DocumentProcessor {
       _replace(0)
 
       val rep = buffer.toString()
-      if(org != rep) {
+      if (org != rep) {
         val n = t.getOwnerDocument.createTextNode(rep)
         elem.replaceChild(n, t)
       }
     }
-    elem.getChildNodes.toList.collect { case t:Element => t }.foreach(concatJapanese)
+    elem.getChildNodes.toList.collect { case t: Element => t }.foreach(concatJapanese)
   }
 
   /**
@@ -106,7 +153,7 @@ class PrettifyProcessor extends DocumentProcessor {
     * @param ch 判定する文字
     * @return 日本語の場合 true
     */
-  private[this] def isJapanese(ch:Char):Boolean = {
+  private[this] def isJapanese(ch: Char): Boolean = {
     // CJK Symbols and Punctuation / Range: 3000–303F
     (ch >= 0x3000 && ch <= 0x303F) ||
       // Hiragana / Range: 3040–309F
