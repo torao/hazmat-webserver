@@ -1,5 +1,5 @@
 #!/bin/bash
-VERSION=1.2.5
+VERSION=1.2.6
 sbt universal:packageBin
 mv target/universal/hazmat-webserver-$VERSION.zip docker/
 docker build -t torao/hazmat-webserver:$VERSION --build-arg VERSION=$VERSION docker
