@@ -1,16 +1,15 @@
 package at.hazm.webserver.handler
 
-import java.io._
-import java.nio.charset.StandardCharsets
-import java.nio.file.Path
-
 import at.hazm._File
 import at.hazm.webserver.Server
 import at.hazm.webserver.handler.CommandHandler._
 import com.twitter.finagle.http._
-import com.twitter.io.{Bufs, Reader}
+import com.twitter.io.{Buf, Reader}
 import org.slf4j.{Logger, LoggerFactory}
 
+import java.io._
+import java.nio.charset.StandardCharsets
+import java.nio.file.Path
 import scala.annotation.tailrec
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.matching.Regex
@@ -24,16 +23,16 @@ import scala.util.{Failure, Success, Try}
   * @param prefix       URL 上のプレフィクス
   * @param interpreters (`.js` などの拡張子, インタープリタ) のマップ
   */
-class CommandHandler(docroot:Path, timeout:Long, prefix:String, interpreters:Map[String, String]) extends RequestHandler(docroot) {
+class CommandHandler(docroot: Path, timeout: Long, prefix: String, interpreters: Map[String, String]) extends RequestHandler(docroot) {
   logger.info(s"""external script enabled for prefix "$prefix", extensions [${interpreters.keys.mkString("\"", "\", \"", "\"")}]""")
 
-  override def apply(request:Request):Option[Response] = None
+  override def apply(request: Request): Option[Response] = None
 
-  override def applyAsync(request:Request)(implicit context:ExecutionContext):Future[Option[Response]] = if(request.uri.startsWith(prefix)) {
+  override def applyAsync(request: Request)(implicit context: ExecutionContext): Future[Option[Response]] = if (request.uri.startsWith(prefix)) {
     FileHandler.mapLocalFile(docroot, request.uri).map { file =>
       interpreters.get("." + file.getExtension) match {
         case Some(interpreter) =>
-          if(!file.isFile) {
+          if (!file.isFile) {
             Future.successful(Some(getErrorResponse(request, Status.NotFound)))
           } else {
             startup(request, interpreter, file).map(x => Some(x))
@@ -54,7 +53,7 @@ class CommandHandler(docroot:Path, timeout:Long, prefix:String, interpreters:Map
     * @param file        実行するファイル
     * @return レスポンス
     */
-  private[this] def startup(request:Request, interpreter:String, file:File)(implicit context:ExecutionContext):Future[Response] = {
+  private[this] def startup(request: Request, interpreter: String, file: File)(implicit context: ExecutionContext): Future[Response] = {
     val pipeRequestBody = request.method == Method.Post || request.method == Method.Put
 
     // プロセスの構築
@@ -75,13 +74,13 @@ class CommandHandler(docroot:Path, timeout:Long, prefix:String, interpreters:Map
       val e = key.toUpperCase.replace('-', '_').replaceAll("[\\x00-\\x1F\\x7F]", "_")
       env.put("HTTP_" + e, request.headerMap.get(key).getOrElse(""))
     }
-    if(request.method == Method.Get) {
+    if (request.method == Method.Get) {
       val uri = request.uri
       val sep = uri.indexOf('?')
-      if(sep >= 0) {
+      if (sep >= 0) {
         env.put("QUERY_STRING", uri.substring(sep + 1))
       }
-    } else if(pipeRequestBody) {
+    } else if (pipeRequestBody) {
       env.put("CONTENT_LENGTH", request.contentLength.getOrElse(0L).toString)
       env.put("CONTENT_TYPE", request.contentType.getOrElse(""))
     }
@@ -96,16 +95,16 @@ class CommandHandler(docroot:Path, timeout:Long, prefix:String, interpreters:Map
 
     def limitTime = timeout - (System.currentTimeMillis() - start)
 
-    def error(status:Status) = getErrorResponse(request, status)
+    def error(status: Status) = getErrorResponse(request, status)
 
     case class GatewayTimeout() extends Exception
 
-    class ErrorReader(name:String, is:InputStream) extends Thread {
-      override def run():Unit = try {
+    class ErrorReader(name: String, is: InputStream) extends Thread {
+      override def run(): Unit = try {
         val in = new BufferedReader(new InputStreamReader(is))
         Iterator.continually(in.readLine()).takeWhile(_ != null).foreach(line => logger.warn(s"[$name] $line"))
       } catch {
-        case ex:Throwable =>
+        case ex: Throwable =>
           logger.warn(s"while reading stderr of process: $name", ex)
       }
     }
@@ -115,7 +114,7 @@ class CommandHandler(docroot:Path, timeout:Long, prefix:String, interpreters:Map
     }) {
       Try(builder.start())
     }.flatMap {
-      case Failure(_:GatewayTimeout) =>
+      case Failure(_: GatewayTimeout) =>
         logger.warn(f"${request.path}: ${System.currentTimeMillis() - start}%,dms => start timeout")
         Future.successful(error(Status.GatewayTimeout))
       case Failure(ex) =>
@@ -134,23 +133,23 @@ class CommandHandler(docroot:Path, timeout:Long, prefix:String, interpreters:Map
             new ErrorReader(interpreter, proc.getErrorStream).start()
 
             // リクエストボディを標準入力経由でコマンドに渡す
-            if(pipeRequestBody) {
+            if (pipeRequestBody) {
               val out = proc.getOutputStream
-              out.write(Bufs.ownedByteArray(request.content))
+              out.write(Buf.ByteArray.Owned.extract(request.content))
               out.flush()
             }
             val response = pipeResponse(request, proc.getInputStream)
-            if(!promise.isCompleted) {
-              if(logger.isDebugEnabled) {
+            if (!promise.isCompleted) {
+              if (logger.isDebugEnabled) {
                 val tm = System.currentTimeMillis() - start
                 logger.debug(f"${request.path}%s: $tm%,dms => ${response.status.code} ${response.status.reason}")
               }
               promise.success(response)
             }
           } catch {
-            case ex:Throwable =>
+            case ex: Throwable =>
               logger.error(s"fail to execute external command: $file", ex)
-              if(!promise.isCompleted) {
+              if (!promise.isCompleted) {
                 promise.success(error(Status.InternalServerError))
               }
           }
@@ -166,7 +165,7 @@ class CommandHandler(docroot:Path, timeout:Long, prefix:String, interpreters:Map
     * @param is      外部スクリプトの出力
     * @return レスポンス
     */
-  private[this] def pipeResponse(request:Request, is:InputStream):Response = {
+  private[this] def pipeResponse(request: Request, is: InputStream): Response = {
     val in = new PushbackInputStream(is)
     readHeader(in).flatMap { case (version, status, headers) =>
       Try {
@@ -176,7 +175,7 @@ class CommandHandler(docroot:Path, timeout:Long, prefix:String, interpreters:Map
           try {
             response.headerMap.add(name, value)
           } catch {
-            case ex:IllegalArgumentException =>
+            case ex: IllegalArgumentException =>
               logger.warn(s"the header generated by command-handler contained an invalid field: $name:$value (ignored); $ex")
           }
         }
@@ -191,10 +190,10 @@ class CommandHandler(docroot:Path, timeout:Long, prefix:String, interpreters:Map
 }
 
 private object CommandHandler {
-  val logger:Logger = LoggerFactory.getLogger(classOf[CommandHandler])
+  val logger: Logger = LoggerFactory.getLogger(classOf[CommandHandler])
 
   /** HTTP レスポンスのステータス行と一致する正規表現 */
-  private[this] val statusLine:Regex =
+  private[this] val statusLine: Regex =
     """HTTP/(\d+)\.(\d+)\s+(\d+)\s+(.*)""".r
 
   /**
@@ -203,7 +202,7 @@ private object CommandHandler {
     * @param in 入力ストリーム
     * @return ステータス行とヘッダ
     */
-  def readHeader(in:PushbackInputStream):Option[(Version, Status, Seq[(String, String)])] = readLines(in).map { lines =>
+  def readHeader(in: PushbackInputStream): Option[(Version, Status, Seq[(String, String)])] = readLines(in).map { lines =>
     val (version, status, headers) = lines.headOption.collect {
       case statusLine(verMajor, verMinor, code, _) =>
         (Version(verMajor.toInt, verMinor.toInt), Status(code.toInt), lines.drop(1))
@@ -219,7 +218,7 @@ private object CommandHandler {
     * @return 1 行分のデータ
     */
   @tailrec
-  private[this] def readLine(in:PushbackInputStream, out:ByteArrayOutputStream = new ByteArrayOutputStream()):Option[Array[Byte]] = in.read() match {
+  private[this] def readLine(in: PushbackInputStream, out: ByteArrayOutputStream = new ByteArrayOutputStream()): Option[Array[Byte]] = in.read() match {
     case '\r' =>
       in.read() match {
         case '\n' => Some(out.toByteArray)
@@ -245,12 +244,12 @@ private object CommandHandler {
     * @return ステータス行とヘッダ
     */
   @tailrec
-  private[this] def readLines(in:PushbackInputStream, lines:Seq[String] = Nil):Option[Seq[String]] = readLine(in) match {
+  private[this] def readLines(in: PushbackInputStream, lines: Seq[String] = Nil): Option[Seq[String]] = readLine(in) match {
     case None =>
       logger.error(f"premature end of header: [${lines.mkString(", ")}]")
       None
     case Some(bytes) =>
-      if(bytes.isEmpty) Some(lines) else readLines(in, lines :+ new String(bytes, StandardCharsets.UTF_8))
+      if (bytes.isEmpty) Some(lines) else readLines(in, lines :+ new String(bytes, StandardCharsets.UTF_8))
   }
 
   /**
@@ -259,17 +258,17 @@ private object CommandHandler {
     * @param headers ヘッダ行
     * @return 認識したヘッダ
     */
-  def buildHeaders(headers:Seq[String]):Seq[(String, String)] = {
+  def buildHeaders(headers: Seq[String]): Seq[(String, String)] = {
     val buffer = headers.toBuffer
-    for(i <- buffer.length - 1 until 0) {
-      if(" \t".exists(_ == buffer(i).head)) {
+    for (i <- buffer.length - 1 until 0) {
+      if (" \t".exists(_ == buffer(i).head)) {
         buffer(i - 1) = buffer(i - 1) + "\r\n" + buffer(i)
         buffer.remove(i)
       }
     }
     buffer.map { header =>
       val sep = header.indexOf(':')
-      if(sep >= 0) {
+      if (sep >= 0) {
         (header.substring(0, sep).trim(), header.substring(sep + 1).trim())
       } else {
         (header, "")

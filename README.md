@@ -1,10 +1,12 @@
 # HazMat Web Server
 
-Asynchronous HTTP Server with Templates & API Scripting Engine for https://hazm.at/, so called Static Site Generator with on demand.
+An asynchronous HTTP Server that is *mostly* a static site generator, with Templates and API Scripting Engine for
+https://hazm.at/.
 
 ## Quick Start
 
-You can use [the Docker image](https://cloud.docker.com/swarm/torao/repository/docker/torao/hazmat-webserver/general) which you can try immediately by just creating the site directory.
+You can use [the Docker image](https://cloud.docker.com/swarm/torao/repository/docker/torao/hazmat-webserver/general)
+which you can try immediately by just creating the site directory.
 Place `docroot`, `cache`, `conf` under the directory `$SERVER_HOME` and NOTE that the `cache` have to be
 777 permission to write temporary data by server.
 
@@ -27,28 +29,30 @@ $ curl http://localhost:8088/index.html
 
 ## Introduction
 
-HazMat Web Server はテンプレートエンジンと API スクリプティングの機能を持った Web サーバ。オンデマンドで静的コンテンツを生成する。Apache のような静的な Web サーバと Ruby on Rails のような鈍重なフルスタックフレームワークの中間を埋めることを目的としている。
+HazMat Web Server はテンプレートエンジンと API スクリプティングの機能を持った Web サーバです。コンテンツに対して最初にアクセスがあった時に
+テンプレートエンジンが起動してコンテンツを生成し、それ以降はファイルの更新を検知するまでキャッシュされたコンテンツを返します。Apache のような
+静的な Web サーバと Ruby on Rails のようなフルスタック Web フレームワークの中間を埋めることを目的としています。
 
-このサーバは静的コンテンツのレイアウトを統一的に管理することを目的としている。
-メテーのサイトを構築するのにタダの HTTP サーバに静的なコンテンツじゃページごとのレイアウトを統一的に管理できなくて超不便じゃん?
-CMS は便利だがスキームがブログや Wiki なんかに特化してるんで THE 俺様ホームページ向けではないしな。
-かといってフルスタック Web フレームワークを持ち込んでも大ナタも甚だしいだろ。
+このサーバは、ブログや Wiki のように _ほぼすべてのコンテンツが_ 静的であるようなサイトにおいて、サーバサイドでの CSS よりさらに協力で柔軟な
+レイアウトの統一、マークアップ記述からの HTML や画像などのコンテンツ生成、Ajax のような Web API を使った動的な処理を実装することを目的と
+しています。
 
-だいたい俺くらいのレベルだとシンプルで素直な XHTML に文章を書いてサーバサイドで XSL 適用するのが一番楽なんだよ。
-それに加えてサーヴァサイドの JavaScript で少々 API のようなものが組めればよい。
-HazMat Server はそのために実装した特別なサーバだ。
-
+私の求めていることは非常に単純です。20 年以上かけてコンテンツを管理するためのサイトを構築する。そのためにシンプルで素直な xhtml で文章を書くことに
+集中しレイアウトは XSLT で制御する。通常のファイルアクセス程度の速度で HTTP リクエストに応じる。加えて、サーバサイドで少々の API のようなものを
+提供できる。この考えに既成の鈍重なフルスタックの Web フレームワークや SPA フレームワークは適合しません。HazMat Server はそのために実装した
+特別なサーバです。
 
 ## Startup Server
 
-Java 8 の最新版が必要。
+HazMat WebServer を実行するには Java 11 が必要です。
 
 ```
-$ ./sbt "runMain at.hazm.webserver.Server $SERVER_HOME"
+$ sbt "runMain at.hazm.webserver.Server $SERVER_HOME"
 ```
 
-`$SERVER_HOME` はコンテンツやサーバ設定を記述したディレクトリだ。省略した場合は起動時のカレントディレクトリ `.` を指定したのと同じ意味。
-`$SERVER_HOME/docroot` がサイト URL のルートとマッピングされるからトップページはここに置いておけばいい。
+コンテンツやサーバ設定を記述したディレクトリを `$SERVER_HOME` に指定します。省略した場合は起動時のカレントディレクトリ `.` を使用します。
+`$SERVER_HOME` ディレクトリの配置は以下の通り。`$SERVER_HOME/docroot` がサイト URL のルートとマッピングされます。以降、
+`$SERVER_HOME/docroot` を `$DOCROOT` と記します。
 
 ```
 ＄SERVER_HOME/
@@ -60,9 +64,8 @@ $ ./sbt "runMain at.hazm.webserver.Server $SERVER_HOME"
   +-- cache/
 ```
 
-`$SERVER_HOME/cache` にはサーバが一時ファイルを書き込むため多くの場合 777 パーミッションを設定しなければならない。
-
-以下 `$SERVER_HOME/docroot` を `$DOCROOT` と記す。
+`$SERVER_HOME/cache` はサーバが一時ファイル (コンパイル済みファイル) をキャッシュするディレクトリです。このためサーバプロセスに書き込み権限
+が必要です。
 
 テンプレート処理の対象外のファイルは通常の静的ファイルと同様に要求があればそのままクライアントへ送信されるだろう。
 
