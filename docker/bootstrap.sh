@@ -4,7 +4,7 @@ SITE=/opt/site
 
 bootstrap(){
   echo -e "\n"
-  echo "=== BOOTSTRAP: `date` ==="
+  echo "=== BOOTSTRAP: START `date` ==="
   if [ -f $SITE/requirements.txt ]
   then
     pip install -r $SITE/requirements.txt
@@ -18,6 +18,7 @@ bootstrap(){
   then
     source $SITE/scripts/bootstrap.sh
   fi
+  echo "=== BOOTSTRAP: END `date` ==="
 }
 
 # bootstrap logging

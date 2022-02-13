@@ -218,6 +218,19 @@ XSL テンプレートには `method`, `host`, `uri`, `path` がパラメータ�
 
 ## Scripts Processing
 
+![Structure](doc/structure.png)
+
+役割によっていくつかの階層に分かれている。サイトがどのようなアプリケーションを実装したいかによって適した場所が異なる。
+拡張ポイントは Java の `ServiceLoader` によって行われる。つまり目的の処理を実装したクラス名を既定の名前のファイルに記述しておけば、HazMat
+サーバがそのクラスをロードして使用する。
+
+| トレイト | 処理 | 使用例 |
+|:--|:--|:--|
+| Action | リクエストパラメータを受け取って JSON で返す Web API の処理。 |  |
+| TemplateEngine | ある静的なファイルをレスポンスに使用できる形式に変換する処理。 | 画像変換など。 |
+| DocumentProcessor | 構築された XML (DOM) に対する処理。 | 図表番号の自動生成など。 |
+| CustomTag | XML 中の特定の位置に埋め込まれる値を生成する処理。 | 目次の自動生成など。 |
+
 ### Getting Started
 
 HazMat サーバで API を実装するには HTML ファイルと同様に JavaScript ファイルを置いておくだけだ。
@@ -320,7 +333,7 @@ name := "hazmat-contents"
 
 version := "1.0"
 
-scalaVersion := "2.12.3"
+scalaVersion := "2.12.15"
 
 resolvers += "CodeLibs Repository" at "http://maven.codelibs.org/"
 
