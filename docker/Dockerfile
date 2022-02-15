@@ -15,14 +15,7 @@ RUN apt install -y  python3-pip python3-dev \
  && ln -s /usr/bin/python3 /usr/local/bin/python \
  && pip3 install --upgrade pip
 
-# Chrome
-#RUN apt install -y wget libgconf-2-4 \
-# && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
-# && sh -c 'echo "deb http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list' \
-# && apt update -y \
-# && apt install -f -y google-chrome-stable
-
-# Node.js
+# Node.js: Mermaid
 RUN curl -sL https://deb.nodesource.com/setup_lts.x | bash - \
  && apt install -y nodejs libxcursor-dev libxdamage-dev libgtk-3-0 libxss1 \
  && npm install -g yarn \
