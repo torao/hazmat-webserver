@@ -1,37 +1,36 @@
 package at.hazm.webserver.handler
 
-import java.io._
-import java.nio.file.Path
-
 import at.hazm.using
 import at.hazm.util.Cache
 import at.hazm.util.XML._
 import at.hazm.webserver.{Config, TemplateEngine}
 import com.twitter.finagle.http.{Request, Response, Status, Version}
-import com.twitter.io.Reader
-import javax.xml.transform.TransformerFactory
-import javax.xml.transform.dom.DOMSource
-import javax.xml.transform.stream.{StreamResult, StreamSource}
+import com.twitter.io.{Buf, Reader}
 import org.slf4j.LoggerFactory
 import org.w3c.dom.Document
 
+import java.io._
+import java.nio.file.Path
+import javax.xml.transform.TransformerFactory
+import javax.xml.transform.dom.DOMSource
+import javax.xml.transform.stream.{StreamResult, StreamSource}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.Elem
 
-abstract class RequestHandler(docroot:Path) {
+abstract class RequestHandler(docroot: Path) {
 
   import RequestHandler._
 
-  private[this] var _engine:Option[TemplateEngine] = None
-  private[this] var _config:Cache[Config] = _
+  private[this] var _engine: Option[TemplateEngine] = None
+  private[this] var _config: Cache[Config] = _
 
-  def errorTemplateEngine_=(engine:TemplateEngine):Unit = _engine = Some(engine)
+  def errorTemplateEngine_=(engine: TemplateEngine): Unit = _engine = Some(engine)
 
-  def config_=(config:Cache[Config]):Unit = _config = config
+  def config_=(config: Cache[Config]): Unit = _config = config
 
-  def apply(request:Request):Option[Response]
+  def apply(request: Request): Option[Response]
 
-  def getErrorResponse(request:Request, status:Status):Response = {
+  def getErrorResponse(request: Request, status: Status): Response = {
     // XSL 変換用のエラーメッセージ
     val error = defaultErrorMessages.getOrElse(status.code, <html>
       <head>
@@ -54,9 +53,9 @@ abstract class RequestHandler(docroot:Path) {
         val dir = new File(docroot.toFile, "error")
         val file = new File(dir, s"${status.code}.html")
         val xsl = new File(dir, "error.xsl")
-        if(file.isFile) {
+        if (file.isFile) {
           Reader.fromFile(file)
-        } else if(xsl.isFile) {
+        } else if (xsl.isFile) {
           transform(request, error, xsl, status.code)
         } else {
           transformDefault(request, error)
@@ -76,7 +75,7 @@ abstract class RequestHandler(docroot:Path) {
     * @param xsl     ローカルファイルシステム上の XSL テンプレート
     * @return レスポンス内容
     */
-  private[this] def transform(request:Request, xml:Document, xsl:File, code:Int):Reader = {
+  private[this] def transform(request: Request, xml: Document, xsl: File, code: Int): Reader[Buf] = {
 
     // XSLT 指定を追加 (キャッシュを破壊しないようにクローンを生成)
     val doc = xml.cloneNode(true).asInstanceOf[Document]
@@ -117,7 +116,7 @@ abstract class RequestHandler(docroot:Path) {
     * @param doc     エラー情報
     * @return レスポンスの内容
     */
-  private[this] def transformDefault(request:Request, doc:Document):Reader = {
+  private[this] def transformDefault(request: Request, doc: Document): Reader[Buf] = {
     val param = TemplateHandler.makeParameters(request)
     val out = new ByteArrayOutputStream()
     val transformer = defaultErrorTemplate.newTransformer()
@@ -129,7 +128,7 @@ abstract class RequestHandler(docroot:Path) {
     Reader.fromStream(new ByteArrayInputStream(out.toByteArray))
   }
 
-  def applyAsync(request:Request)(implicit context:ExecutionContext):Future[Option[Response]] = Future(apply(request))
+  def applyAsync(request: Request)(implicit context: ExecutionContext): Future[Option[Response]] = Future(apply(request))
 }
 
 object RequestHandler {
@@ -146,7 +145,7 @@ object RequestHandler {
 
   private[RequestHandler] val defaultErrorMessages = {
     (scala.xml.XML.load(getClass.getResource("/at/hazm/errors.xml")) \ "error").collect {
-      case error:Elem =>
+      case error: Elem =>
         val code = (error \ "code").text.trim().toInt
         code -> error
     }

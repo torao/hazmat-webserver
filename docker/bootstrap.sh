@@ -4,7 +4,9 @@ SITE=/opt/site
 
 bootstrap(){
   echo -e "\n"
-  echo "=== BOOTSTRAP: `date` ==="
+  echo "=== BOOTSTRAP: START $(date) ==="
+  printenv
+  echo -e "\n"
   if [ -f $SITE/requirements.txt ]
   then
     pip install -r $SITE/requirements.txt
@@ -18,16 +20,17 @@ bootstrap(){
   then
     source $SITE/scripts/bootstrap.sh
   fi
+  echo "=== BOOTSTRAP: END $(date) ==="
 }
 
 # bootstrap logging
 LOGDIR=$SITE/logs
-LOGFILE=$LOGDIR/bootstrap-`date "+%Y%m%d"`.log
+LOGFILE=$LOGDIR/bootstrap-$(date "+%Y%m%d").log
 if [ -d $LOGDIR ]
 then
   mkdir -p $LOGDIR
 fi
 
-bootstrap > $LOGFILE 2>&1 &
+bootstrap > "$LOGFILE" 2>&1 &
 cd $SITE
-/opt/webserver/bin/hazmat-webserver $*
+/opt/webserver/bin/hazmat-webserver $@
