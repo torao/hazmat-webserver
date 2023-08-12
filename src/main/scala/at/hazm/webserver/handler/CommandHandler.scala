@@ -261,11 +261,14 @@ private object CommandHandler {
   def buildHeaders(headers: Seq[String]): Seq[(String, String)] = {
     val buffer = headers.toBuffer
     if (buffer.nonEmpty) {
-      for (i <- buffer.length - 1 until 0) {
+      for (i <- (1 until buffer.length).reverse) {
         if (" \t".exists(_ == buffer(i).head)) {
           buffer(i - 1) = buffer(i - 1) + "\r\n" + buffer(i)
           buffer.remove(i)
         }
+      }
+      if (" \t".exists(_ == buffer.head.head)) {
+        logger.error("broken header from script: $buffer")
       }
     }
     buffer.map { header =>
