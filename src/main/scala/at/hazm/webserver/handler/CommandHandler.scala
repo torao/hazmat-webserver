@@ -260,10 +260,12 @@ private object CommandHandler {
     */
   def buildHeaders(headers: Seq[String]): Seq[(String, String)] = {
     val buffer = headers.toBuffer
-    for (i <- buffer.length - 1 until 0) {
-      if (" \t".exists(_ == buffer(i).head)) {
-        buffer(i - 1) = buffer(i - 1) + "\r\n" + buffer(i)
-        buffer.remove(i)
+    if (buffer.nonEmpty) {
+      for (i <- buffer.length - 1 until 0) {
+        if (" \t".exists(_ == buffer(i).head)) {
+          buffer(i - 1) = buffer(i - 1) + "\r\n" + buffer(i)
+          buffer.remove(i)
+        }
       }
     }
     buffer.map { header =>
