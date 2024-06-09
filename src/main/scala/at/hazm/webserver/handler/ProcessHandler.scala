@@ -5,8 +5,6 @@ import at.hazm.util.Cache.FileSource
 import at.hazm.webserver._
 import com.twitter.finagle.http._
 import com.twitter.io.{Buf, Reader}
-import jdk.nashorn.api.scripting.JSObject
-import jdk.nashorn.internal.runtime.Undefined
 import org.slf4j.LoggerFactory
 import play.api.libs.json._
 
@@ -117,12 +115,7 @@ abstract class ProcessHandler[T](docroot: Path, timeout: Long, exts: Seq[String]
     */
   protected def toJSON(value: AnyRef): JsValue = value match {
     case null => JsNull
-    case o: JSObject =>
-      if (o.isArray) {
-        JsArray(o.values().asScala.map(toJSON).toSeq)
-      } else {
-        JsObject(o.keySet().asScala.map { key => (key, o.getMember(key)) }.toMap.mapValues(toJSON))
-      }
+    case v: JsValue => v
     case s: String => JsString(s)
     case i: Integer => JsNumber(BigDecimal(i))
     case i: java.lang.Long => JsNumber(BigDecimal(i))
@@ -130,7 +123,6 @@ abstract class ProcessHandler[T](docroot: Path, timeout: Long, exts: Seq[String]
     case i: java.lang.Double => if (i.isNaN) JsNull else JsNumber(BigDecimal(i))
     case i: java.math.BigDecimal => JsNumber(i)
     case i: java.lang.Boolean => JsBoolean(i)
-    case _: Undefined => JsNull
     case unknown => JsString(unknown.toString)
   }
 

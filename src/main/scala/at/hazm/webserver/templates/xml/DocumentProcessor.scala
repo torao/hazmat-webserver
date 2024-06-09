@@ -1,6 +1,5 @@
 package at.hazm.webserver.templates.xml
 
-import at.hazm.webserver.templates.xml
 import at.hazm.webserver.{Context, Dependency}
 import org.slf4j.LoggerFactory
 import org.w3c.dom.{Document, Element, Node, NodeList}
@@ -34,8 +33,6 @@ trait DocumentProcessor {
   def getRoot: File = root
 
   def getDocroot: File = docroot
-
-  def helper(doc: Document, docroot: File, location: File) = new xml.ScriptProcessor.Context(doc, docroot, location)
 }
 
 
