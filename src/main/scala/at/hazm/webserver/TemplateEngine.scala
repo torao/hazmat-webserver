@@ -4,8 +4,8 @@ import java.io._
 import java.util.ServiceLoader
 import java.util.concurrent.ConcurrentHashMap
 import scala.collection.JavaConverters._
-
 import at.hazm.using
+import at.hazm.util.Cache
 import org.slf4j.LoggerFactory
 
 /**
@@ -22,6 +22,8 @@ trait TemplateEngine {
   def transform(file:File, in:InputStream, out:OutputStream, param: => Map[String, String]):Dependency
 
   def setRoot(dir:File):Unit = None
+
+  def setConfig(config:Cache[Config]):Unit = None
 }
 
 object TemplateEngine {
@@ -32,11 +34,12 @@ object TemplateEngine {
     var dependency:Option[Dependency] = None
   }
 
-  class Manager(root:File, interval:Long) {
+  class Manager(root:File, interval:Long, config:Cache[Config]) {
     private[this] val docroot = Context.docroot(root)
 
     private[this] val engines = ServiceLoader.load(classOf[TemplateEngine]).asScala.map{ sp =>
       sp.setRoot(root)
+      sp.setConfig(config)
       logger.debug(s"using template engine: ${sp.getClass.getSimpleName}")
       sp
     }

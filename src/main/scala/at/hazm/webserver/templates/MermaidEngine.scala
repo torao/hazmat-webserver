@@ -1,6 +1,7 @@
 package at.hazm.webserver.templates
 
-import at.hazm.webserver.{Dependency, TemplateEngine}
+import at.hazm.util.Cache
+import at.hazm.webserver.{Config, Dependency, TemplateEngine}
 import org.slf4j.LoggerFactory
 
 import java.io._
