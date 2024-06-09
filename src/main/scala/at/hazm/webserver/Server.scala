@@ -1,16 +1,15 @@
 package at.hazm.webserver
 
-import java.io.File
-import java.net.InetAddress
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.{Properties, Timer, TimerTask}
-
 import at.hazm.using
 import at.hazm.webserver.Server.logger
 import com.twitter.finagle.{Http, ListeningServer}
 import com.twitter.util.{Await, Duration}
 import org.slf4j.LoggerFactory
 
+import java.io.File
+import java.net.InetAddress
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.{Properties, Timer, TimerTask}
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.Try
 
@@ -19,7 +18,7 @@ import scala.util.Try
   */
 class Server {
 
-  private[this] var server:ListeningServer = _
+  private[this] var server: ListeningServer = _
   private[this] val closed = new AtomicBoolean(true)
 
   /**
@@ -27,8 +26,8 @@ class Server {
     *
     * @param context サーバ設定
     */
-  def startup(context:Context):Unit = if(closed.compareAndSet(true, false)) {
-    logger.info(s"starting HazMat Web Server for Java ${System.getProperty("java.version")} (${System.getProperty("java.runtime.name")} ${System.getProperty("java.runtime.version")}) on ${context.dir} (directory ${if(context.dir.exists()) "available" else "not available"})")
+  def startup(context: Context): Unit = if (closed.compareAndSet(true, false)) {
+    logger.info(s"starting HazMat Web Server for Java ${System.getProperty("java.version")} (${System.getProperty("java.runtime.name")} ${System.getProperty("java.runtime.version")}) on ${context.dir} (directory ${if (context.dir.exists()) "available" else "not available"})")
     context.init()
     val config = context.config.server.get
 
@@ -39,7 +38,7 @@ class Server {
       case "0.0.0.0" | "*" =>
         InetAddress.getAllByName(InetAddress.getLocalHost.getHostAddress).map(_.getHostName).toSeq :+ "localhost"
       case host => Seq(host)
-    }).distinct.sorted.map(host => s"http://$host${if(port != 80) s":$port" else ""}").mkString(", ")
+    }).distinct.sorted.map(host => s"http://$host${if (port != 80) s":$port" else ""}").mkString(", ")
 
     server = Http.server
       .withStreaming(true)
@@ -54,7 +53,7 @@ class Server {
   /**
     * サーバを終了する。
     */
-  def shutdown():Unit = if(closed.compareAndSet(false, true)) {
+  def shutdown(): Unit = if (closed.compareAndSet(false, true)) {
     logger.debug("shutting-down server...")
     server.close().onSuccess { _ =>
       logger.info(s"shutdown complete")
@@ -70,7 +69,7 @@ object Server {
   initLogging()
   private[Server] val logger = LoggerFactory.getLogger(getClass.getName.dropRight(1))
 
-  def main(args:Array[String]):Unit = {
+  def main(args: Array[String]): Unit = {
     logger.debug(s"${classOf[Server].getName}.main(${args.mkString("\"", "\", \"", "\"")})")
 
     val dir = args.headOption.getOrElse(".")
@@ -78,7 +77,7 @@ object Server {
     val context = new Context(dir, 2 * 1000L)
     val server = new Server()
 
-    while(true) {
+    while (true) {
       context.config.server.get
       context.config.server.onUpdate { (_, _) =>
         server.shutdown()
@@ -90,7 +89,7 @@ object Server {
   /**
     * サーバのバージョン文字列。`Server` レスポンスヘッダに使用する。
     */
-  val Version:String = {
+  val Version: String = {
     import scala.collection.JavaConverters._
     val serverVersion = this.getClass.getClassLoader.getResources("META-INF/MANIFEST.MF").asScala.map { url =>
       val mf = new java.util.jar.Manifest()
@@ -132,13 +131,13 @@ object Server {
     s"HazMat Server/$serverVersion Finagle/$finagleVersion"
   }
 
-  private[this] def initLogging():Unit = {
+  private[this] def initLogging(): Unit = {
     import com.twitter.logging.{Formatter, Handler, Level, LoggerFactory => TWLoggerFactory}
-    class Log4jHandler(formatter:Formatter = new Formatter(), level:Option[Level] = None) extends Handler(formatter, level) {
+    class Log4jHandler(formatter: Formatter = new Formatter(), level: Option[Level] = None) extends Handler(formatter, level) {
 
       import java.util.{logging => jlog}
 
-      def publish(record:jlog.LogRecord):Unit = {
+      def publish(record: jlog.LogRecord): Unit = {
         val logger = LoggerFactory.getLogger(record.getLoggerName)
         record.getLevel.intValue() match {
           case l if l >= jlog.Level.SEVERE.intValue() => logger.error(record.getMessage, record.getThrown)
@@ -149,9 +148,9 @@ object Server {
         }
       }
 
-      def close():Unit = {}
+      def close(): Unit = {}
 
-      def flush():Unit = {}
+      def flush(): Unit = {}
     }
 
     val factory = TWLoggerFactory(
@@ -167,7 +166,7 @@ object Server {
     private[this] val timer = new Timer("HazMat Timer", true)
 
     trait Cancelable {
-      def cancel():Unit
+      def cancel(): Unit
     }
 
     /**
@@ -175,7 +174,7 @@ object Server {
       *
       * @param msg 例外メッセージ
       */
-    case class TimeoutException(msg:String) extends Exception(msg)
+    case class TimeoutException(msg: String) extends Exception(msg)
 
     /**
       * 指定された時刻後に処理を実行する。
@@ -185,13 +184,13 @@ object Server {
       * @tparam T 処理結果の型
       * @return (処理結果, 処理キャンセル用のコールバック)
       */
-    def at[T](delay:Long)(f: => T):(Future[T], Cancelable) = {
+    def at[T](delay: Long)(f: => T): (Future[T], Cancelable) = {
       val promise = Promise[T]()
       val task = new TimerTask() {
-        override def run():Unit = {
+        override def run(): Unit = {
           val result = Try(f)
           promise.synchronized {
-            if(!promise.isCompleted) promise.complete(result)
+            if (!promise.isCompleted) promise.complete(result)
           }
         }
       }
@@ -199,12 +198,12 @@ object Server {
       (promise.future, () => {
         task.cancel()
         promise.synchronized {
-          if(!promise.isCompleted) promise.failure(TimeoutException("task canceled"))
+          if (!promise.isCompleted) promise.failure(TimeoutException("task canceled"))
         }
       })
     }
 
-    private[this] def defaultOnTimeout(t:Thread):Future[_] = Future.failed(TimeoutException("execution timed-out"))
+    private[this] def defaultOnTimeout(t: Thread): Future[_] = Future.failed(TimeoutException("execution timed-out"))
 
     /**
       * タイムアウト処理付きの非同期実行。
@@ -218,8 +217,8 @@ object Server {
       * @tparam T 非同期処理の結果の型
       * @return 処理結果
       */
-    def runWithTimeout[T](interval:Long, onTimeout:Thread => Future[T] = defaultOnTimeout _)(f: => T)(implicit _context:ExecutionContext):Future[T] = {
-      if(interval <= 0) {
+    def runWithTimeout[T](interval: Long, onTimeout: Thread => Future[T] = defaultOnTimeout _)(f: => T)(implicit _context: ExecutionContext): Future[T] = {
+      if (interval <= 0) {
         onTimeout(Thread.currentThread())
       } else {
         val promise = Promise[T]()
@@ -234,13 +233,13 @@ object Server {
           try {
             val result = f
             promise.synchronized {
-              if(!promise.isCompleted) promise.success(result)
+              if (!promise.isCompleted) promise.success(result)
             }
           } catch {
-            case ex:Throwable if !ex.isInstanceOf[ThreadDeath] =>
+            case ex: Throwable if !ex.isInstanceOf[ThreadDeath] =>
               logger.warn("unhandled exception", ex)
               promise.synchronized {
-                if(!promise.isCompleted) promise.failure(ex)
+                if (!promise.isCompleted) promise.failure(ex)
               }
           } finally {
             call.cancel()

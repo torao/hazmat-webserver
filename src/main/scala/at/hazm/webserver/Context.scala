@@ -1,15 +1,14 @@
 package at.hazm.webserver
 
-import java.io.File
-import java.nio.charset.StandardCharsets
-import java.security.MessageDigest
-import java.util.concurrent.atomic.AtomicReference
-
 import at.hazm.util.Cache
 import at.hazm.util.Cache.FileSource
 import at.hazm.webserver.handler.MimeType
 import org.slf4j.LoggerFactory
 
+import java.io.File
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
+import java.util.concurrent.atomic.AtomicReference
 import scala.annotation.tailrec
 
 class Context private[this](val dir: File, timestampCheckInterval: Long) {

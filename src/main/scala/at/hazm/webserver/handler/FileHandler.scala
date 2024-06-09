@@ -1,21 +1,21 @@
 package at.hazm.webserver.handler
 
-import java.io._
-import java.nio.file.Path
-import java.util.Date
-
 import at.hazm.on
 import at.hazm.util.Cache
 import at.hazm.webserver._
 import com.twitter.finagle.http.{Request, Response, Status, Version}
 import org.slf4j.LoggerFactory
 
-class FileHandler(docroot:Path, sendBufferSize:Int, mime:Cache[MimeType]) extends RequestHandler(docroot) {
+import java.io._
+import java.nio.file.Path
+import java.util.Date
+
+class FileHandler(docroot: Path, sendBufferSize: Int, mime: Cache[MimeType]) extends RequestHandler(docroot) {
   assert(docroot.toString == docroot.toAbsolutePath.toString)
 
   import FileHandler._
 
-  override def apply(request:Request):Option[Response] = Some(mapLocalFile(docroot, request.uri) match {
+  override def apply(request: Request): Option[Response] = Some(mapLocalFile(docroot, request.uri) match {
     case Some(file) =>
       getResource(request, file) match {
         case Right(resource) =>
@@ -36,28 +36,28 @@ class FileHandler(docroot:Path, sendBufferSize:Int, mime:Cache[MimeType]) extend
       getErrorResponse(request, Status.BadRequest)
   })
 
-  protected def getResource(request:Request, realPath:File):Either[Response, Resource] = if(realPath.isFile) {
-    if(realPath.canRead) {
+  protected def getResource(request: Request, realPath: File): Either[Response, Resource] = if (realPath.isFile) {
+    if (realPath.canRead) {
       Right(LocalFile(realPath))
     } else {
       logger.debug(s"resource don't have read permission: $realPath")
       Left(getErrorResponse(request, Status.Forbidden))
     }
-  } else if(realPath.isDirectory) {
+  } else if (realPath.isDirectory) {
     // ディレクトリが指定された場合はデフォルトHTMLにリダイレクト
     // ※index.html が動的生成の場合はファイルとして存在しないため Forbidden にする場合は他のハンドラが存在するかを判断しなければならない
     val indexFile = "index.html"
     request.originalURL match {
       case Some(location) =>
         Left(on(getErrorResponse(request, Status.Found)) { res =>
-          res.location = s"$location${if(location.endsWith("/")) "" else "/"}$indexFile"
+          res.location = s"$location${if (location.endsWith("/")) "" else "/"}$indexFile"
           logger.debug(s"directory redirect to: ${res.location.getOrElse("???")}")
         })
       case None =>
         logger.debug(s"original request is not available: $request")
         Left(getErrorResponse(request, Status.Forbidden))
     }
-  } else if(!docroot.toFile.exists()) {
+  } else if (!docroot.toFile.exists()) {
     // docroot ディレクトリが存在しない場合はデフォルトのページを表示
     val path = "/at/hazm/index.html"
     Option(getClass.getResource(path)) match {
@@ -84,10 +84,10 @@ object FileHandler {
     * @param uri リクエスト URL
     * @return ローカルファイル
     */
-  def mapLocalFile(docroot:Path, uri:String):Option[File] = {
+  def mapLocalFile(docroot: Path, uri: String): Option[File] = {
     val path = uri.takeWhile { ch => ch != '?' && ch != '#' }
     val requestPath = docroot.resolve(path.dropWhile(_ == '/')).toAbsolutePath
-    if(!requestPath.toString.startsWith(docroot.toString)) {
+    if (!requestPath.toString.startsWith(docroot.toString)) {
       logger.debug(s"invalid uri: $requestPath isn't start with $docroot")
       None
     } else Some(requestPath.toFile)
@@ -100,8 +100,8 @@ object FileHandler {
     * @param lastModified If-Modified-Since と比較する日時
     * @return 304 レスポンスまたは None
     */
-  def ifModifiedSince(request:Request, lastModified:Long):Option[Response] = request.getDateHeader("If-Modified-Since").flatMap { ifModifiedSince =>
-    if((ifModifiedSince.getTime - lastModified) / 1000 >= 0) {
+  def ifModifiedSince(request: Request, lastModified: Long): Option[Response] = request.getDateHeader("If-Modified-Since").flatMap { ifModifiedSince =>
+    if ((ifModifiedSince.getTime - lastModified) / 1000 >= 0) {
       Some(on(Response(Version.Http11, Status.NotModified)) { res =>
         res.cacheControl = "no-cache"
       })

@@ -1,9 +1,9 @@
 package at.hazm.webserver.templates.xml
 
+import org.w3c.dom._
+
 import java.io.Writer
 import java.nio.charset.Charset
-
-import org.w3c.dom._
 
 
 object DocumentWriter {
@@ -11,26 +11,26 @@ object DocumentWriter {
   /**
     * 内容が空の場合に終タグを記述せず Empty-Element Tags で記述する要素 (全て小文字)。
     */
-  val EmptyElements:Set[String] = Set("area", "br", "col", "embed", "hr", "input", "meta", "link", "img", "param", "base", "source", "track", "wbr")
+  val EmptyElements: Set[String] = Set("area", "br", "col", "embed", "hr", "input", "meta", "link", "img", "param", "base", "source", "track", "wbr")
 
   /**
     * 内容のテキストをエスケープしない。
     */
-  val ContentWithoutEscape:Set[String] = Set("script", "style")
+  val ContentWithoutEscape: Set[String] = Set("script", "style")
 
-  def write(out:Writer, charset:Charset, doc:Document):Unit = {
+  def write(out: Writer, charset: Charset, doc: Document): Unit = {
     out.write("<!DOCTYPE html SYSTEM \"about:legacy-compat\">\n")
     // out.write("<?xml version=\"1.0\" encoding=\"" + charset.name() + "\"?>\n")
     write(out, doc.getDocumentElement, noescape = false)
     out.flush()
   }
 
-  private[this] def write(out:Writer, node:Node, noescape:Boolean):Unit = node match {
-    case e:Element =>
+  private[this] def write(out: Writer, node: Node, noescape: Boolean): Unit = node match {
+    case e: Element =>
       out.write("<")
       out.write(e.getTagName)
       val as = e.getAttributes
-      for(i <- 0 until as.getLength) {
+      for (i <- 0 until as.getLength) {
         val a = as.item(i).asInstanceOf[Attr]
         out.write(' ')
         out.write(a.getName)
@@ -39,10 +39,10 @@ object DocumentWriter {
         out.write('\"')
       }
       val cs = e.getChildNodes.toList.filter {
-        case t:Text => t.getData.nonEmpty
+        case t: Text => t.getData.nonEmpty
         case _ => true
       }
-      if(cs.nonEmpty || ! EmptyElements.contains(e.getTagName.toLowerCase)) {
+      if (cs.nonEmpty || !EmptyElements.contains(e.getTagName.toLowerCase)) {
         out.write('>')
         cs.foreach { c => write(out, c, noescape || ContentWithoutEscape.contains(e.getTagName.toLowerCase)) }
         out.write("</")
@@ -51,27 +51,27 @@ object DocumentWriter {
       } else {
         out.write("/>")
       }
-    case t:CDATASection =>
+    case t: CDATASection =>
       out.write("<![CDATA[")
       out.write(t.getData)
       out.write("]]>")
-    case t:Text =>
-      out.write(if(noescape) t.getData else escape(t.getData))
-    case pi:ProcessingInstruction =>
+    case t: Text =>
+      out.write(if (noescape) t.getData else escape(t.getData))
+    case pi: ProcessingInstruction =>
       out.write("<?")
       out.write(pi.getTarget)
-      if(pi.getData.nonEmpty) {
+      if (pi.getData.nonEmpty) {
         out.write(' ')
         out.write(pi.getData)
       }
       out.write("?>")
-    case c:Comment =>
+    case c: Comment =>
       out.write("<!--")
       out.write(c.getData)
       out.write("-->")
   }
 
-  private[this] def escape(text:String):String = {
+  private[this] def escape(text: String): String = {
     val buffer = new StringBuilder()
     text.foreach {
       case '<' => buffer.append("&lt;")
@@ -80,7 +80,7 @@ object DocumentWriter {
       case '\"' => buffer.append("&quot;")
       case '\'' => buffer.append("&apos;")
       case ch =>
-        if(Character.isDefined(ch)) {
+        if (Character.isDefined(ch)) {
           buffer.append(ch)
         } else {
           buffer.append(f"&#u${ch.toInt}%04X;")

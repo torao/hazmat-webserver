@@ -1,14 +1,14 @@
 package at.hazm.webserver.handler
 
-import java.net.URI
-import java.nio.charset.StandardCharsets
-import java.nio.file.Path
-import javax.script.{ScriptContext, ScriptEngine, ScriptEngineManager}
-
 import at.hazm.webserver._
 import com.twitter.finagle.http._
 import org.slf4j.LoggerFactory
 import play.api.libs.json._
+
+import java.net.URI
+import java.nio.charset.StandardCharsets
+import java.nio.file.Path
+import javax.script.{ScriptContext, ScriptEngine, ScriptEngineManager}
 
 /**
   * ドキュメントルート上に配置されている JavaScript ファイルをサーバサイドで実行するためのリクエストハンドラ。
@@ -18,12 +18,12 @@ import play.api.libs.json._
   * @param exts    対象とするファイルの拡張子 (`".xjs"` など)
   * @param libs    ライブラリディレクトリ
   */
-class ScriptHandler(docroot:Path, timeout:Long, exts:Seq[String], libs:ClassLoader) extends ProcessHandler[String](docroot, timeout, exts, libs, (uri:URI, binary:Option[Array[Byte]]) => binary.map(b => new String(b, StandardCharsets.UTF_8)).getOrElse("")) {
+class ScriptHandler(docroot: Path, timeout: Long, exts: Seq[String], libs: ClassLoader) extends ProcessHandler[String](docroot, timeout, exts, libs, (uri: URI, binary: Option[Array[Byte]]) => binary.map(b => new String(b, StandardCharsets.UTF_8)).getOrElse("")) {
   private[this] val logger = LoggerFactory.getLogger(getClass)
 
   private[this] val manager = new ScriptEngineManager(loader)
 
-  protected def exec(data:String, request:Request, query:JsValue):AnyRef = {
+  protected def exec(data: String, request: Request, query: JsValue): AnyRef = {
     val engine = manager.getEngineByName("JavaScript")
     engine.put(ScriptEngine.FILENAME, request.path)
 

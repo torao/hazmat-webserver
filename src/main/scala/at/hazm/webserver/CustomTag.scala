@@ -11,8 +11,8 @@ trait CustomTag {
   /**
     * このカスタムタグがコールバックを受ける要素の名前空間 URI。
     */
-  def namespaceURI:String
+  def namespaceURI: String
 
-  def apply(namespace:String, localName:String, elem:Element, context:DocumentProcessor.Context):Unit
+  def apply(namespace: String, localName: String, elem: Element, context: DocumentProcessor.Context): Unit
 }
 

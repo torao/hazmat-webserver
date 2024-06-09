@@ -1,15 +1,15 @@
 package at.hazm.webserver.handler
 
-import java.io.FileNotFoundException
-import java.nio.file.Path
-import java.util.Date
-
 import at.hazm._
 import at.hazm.util.Cache
 import at.hazm.webserver.{TemplateEngine, _}
 import com.twitter.finagle.http.{Request, Response, Status, Version}
 import com.twitter.io.Reader
 import org.slf4j.LoggerFactory
+
+import java.io.FileNotFoundException
+import java.nio.file.Path
+import java.util.Date
 
 /**
   * ローカルファイルシステム上のファイルに対してテンプレート処理を行うリクエストハンドラです。
@@ -19,14 +19,14 @@ import org.slf4j.LoggerFactory
   * @param mime     MIME-Type
   * @param manager  テンプレートマネージャ
   */
-class TemplateHandler(docroot:Path, cacheDir:Path, mime:Cache[MimeType], manager:TemplateEngine.Manager) extends RequestHandler(docroot) {
+class TemplateHandler(docroot: Path, cacheDir: Path, mime: Cache[MimeType], manager: TemplateEngine.Manager) extends RequestHandler(docroot) {
   private[this] val logger = LoggerFactory.getLogger(getClass)
 
-  override def apply(request:Request):Option[Response] = FileHandler.mapLocalFile(docroot, request.uri) match {
+  override def apply(request: Request): Option[Response] = FileHandler.mapLocalFile(docroot, request.uri) match {
     case Some(file) =>
       // リクエスト URI とマッピングしたローカルファイルに対して、ファイルが存在するのであれば FileHandler によって
       // 処理が行われるためテンプレートハンドラは何もしない
-      if(file.exists()) None else {
+      if (file.exists()) None else {
         val cache = FileHandler.mapLocalFile(cacheDir, request.uri).get
         try {
           val force = request.headerMap.get("Cache-Control").orElse(request.headerMap.get("Pragma")).contains("no-cache")
@@ -40,10 +40,10 @@ class TemplateHandler(docroot:Path, cacheDir:Path, mime:Cache[MimeType], manager
             }
           }
         } catch {
-          case ex:FileNotFoundException =>
+          case ex: FileNotFoundException =>
             logger.error(s"template file not found: requested file: $file", ex)
             Some(getErrorResponse(request, Status.InternalServerError))
-          case ex:Exception =>
+          case ex: Exception =>
             logger.error(s"template compile error: ${request.path} -> $file", ex)
             Some(getErrorResponse(request, Status.InternalServerError))
         }
@@ -56,7 +56,7 @@ class TemplateHandler(docroot:Path, cacheDir:Path, mime:Cache[MimeType], manager
 }
 
 object TemplateHandler {
-  def makeParameters(request:Request):Map[String, String] = Map(
+  def makeParameters(request: Request): Map[String, String] = Map(
     "method" -> request.method.name,
     "uri" -> request.uri,
     "path" -> request.path,

@@ -1,18 +1,17 @@
 package at.hazm.webserver.templates.xml
 
-import java.io._
-import java.net.URI
-import java.nio.charset.StandardCharsets
-
 import at.hazm.using
 import at.hazm.webserver.Dependency
-import javax.script.{ScriptEngine, ScriptEngineManager}
-import javax.xml.parsers.DocumentBuilderFactory
-import javax.xml.xpath.{XPathConstants, XPathFactory}
 import jdk.nashorn.api.scripting.ScriptObjectMirror
 import org.slf4j.LoggerFactory
 import org.w3c.dom.{Document, Element, Node, NodeList}
 
+import java.io._
+import java.net.URI
+import java.nio.charset.StandardCharsets
+import javax.script.{ScriptEngine, ScriptEngineManager}
+import javax.xml.parsers.DocumentBuilderFactory
+import javax.xml.xpath.{XPathConstants, XPathFactory}
 import scala.collection.mutable
 
 class ScriptProcessor extends DocumentProcessor {

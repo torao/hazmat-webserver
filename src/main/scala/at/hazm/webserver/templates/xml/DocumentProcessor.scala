@@ -1,15 +1,14 @@
 package at.hazm.webserver.templates.xml
 
-import java.io.File
-import java.net.{URI, URL}
-
 import at.hazm.webserver.templates.xml
 import at.hazm.webserver.{Context, Dependency}
-import javax.xml.parsers.DocumentBuilderFactory
-import javax.xml.xpath.{XPathConstants, XPathFactory}
 import org.slf4j.LoggerFactory
 import org.w3c.dom.{Document, Element, Node, NodeList}
 
+import java.io.File
+import java.net.{URI, URL}
+import javax.xml.parsers.DocumentBuilderFactory
+import javax.xml.xpath.{XPathConstants, XPathFactory}
 import scala.collection.mutable
 
 /**

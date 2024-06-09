@@ -1,28 +1,27 @@
 package at.hazm.webserver
 
-import java.io.File
-import java.net.URLDecoder
-
 import com.twitter.finagle.http.{Method, Request, Response, Status}
 import play.api.libs.json._
 
+import java.io.File
+import java.net.URLDecoder
 import scala.language.implicitConversions
 
 trait Action {
-  private[this] var _docroot:File = _
+  private[this] var _docroot: File = _
 
-  def docroot_=(docroot:File):Unit = this._docroot = docroot
+  def docroot_=(docroot: File): Unit = this._docroot = docroot
 
-  def docroot:File = _docroot
+  def docroot: File = _docroot
 
-  def uriPrefix:String
+  def uriPrefix: String
 
-  def apply(request:Request, suburi:String):Option[Response]
+  def apply(request: Request, suburi: String): Option[Response]
 
   /**
     * サブクラスの Action がリクエストの操作を行いやすくするためのユーティリティクラス。
     */
-  implicit class _Request(req:Request) {
+  implicit class _Request(req: Request) {
 
     /**
       * リクエストとして送信されてる HTML フォーム形式 (GET/POST) または JSON 形式 (POST/PUT) のデータをアプリケーション
@@ -30,7 +29,7 @@ trait Action {
       *
       * @return リクエストされたデータの JSON 形式
       */
-    def asJSON:Option[JsValue] = if (req.method == Method.Get) {
+    def asJSON: Option[JsValue] = if (req.method == Method.Get) {
       val separator = req.uri.indexOf('?')
       if (separator < 0) {
         Some(Json.obj())
@@ -46,7 +45,7 @@ trait Action {
       }
     } else None
 
-    private[this] def formToJson(params:String):JsObject = JsObject(params.split('&')
+    private[this] def formToJson(params: String): JsObject = JsObject(params.split('&')
       .filter(_.nonEmpty)
       .map(_.split("=", 2))
       .collect {
@@ -58,8 +57,8 @@ trait Action {
       .mapValues(values => if (values.length > 1) Json.arr(values) else JsString(values.head)))
   }
 
-  implicit class _JsValue(jv:JsValue) {
-    def asString:String = jv match {
+  implicit class _JsValue(jv: JsValue) {
+    def asString: String = jv match {
       case JsString(value) => value
       case JsNumber(value) => value.toString
       case JsNull => ""
@@ -67,13 +66,13 @@ trait Action {
       case unexpected => Json.stringify(unexpected)
     }
 
-    def asInt:Int = asInt(0)
+    def asInt: Int = asInt(0)
 
-    def asInt(default:Int):Int = asLong(default).toInt
+    def asInt(default: Int): Int = asLong(default).toInt
 
-    def asLong:Long = asLong(0)
+    def asLong: Long = asLong(0)
 
-    def asLong(default:Long):Long = jv match {
+    def asLong(default: Long): Long = jv match {
       case JsNumber(value) => value.toLong
       case JsString(value) => value.toLong
       case JsNull => default
@@ -81,9 +80,9 @@ trait Action {
       case _ => default
     }
 
-    def asDouble:Double = asDouble(0.0)
+    def asDouble: Double = asDouble(0.0)
 
-    def asDouble(default:Double):Double = jv match {
+    def asDouble(default: Double): Double = jv match {
       case JsNumber(value) => value.toDouble
       case JsString(value) => value.toDouble
       case JsNull => default
@@ -91,7 +90,7 @@ trait Action {
       case _ => default
     }
 
-    def asBoolean:Boolean = jv match {
+    def asBoolean: Boolean = jv match {
       case JsBoolean(value) => value
       case JsString(value) => value.toBoolean
       case JsNumber(value) => value != 0
@@ -99,24 +98,24 @@ trait Action {
       case _ => false
     }
 
-    def asSeq:Seq[JsValue] = jv match {
+    def asSeq: Seq[JsValue] = jv match {
       case JsArray(arr) => arr
       case unexpected => Seq(unexpected)
     }
 
-    def asMap:Map[String, JsValue] = jv match {
+    def asMap: Map[String, JsValue] = jv match {
       case JsObject(value) => value.toMap
       case _ => Map.empty
     }
   }
 
-  def makeJsonResponse(code:Status, value:JsValue):Response = {
+  def makeJsonResponse(code: Status, value: JsValue): Response = {
     val res = Response(code)
     res.contentString = Json.stringify(value)
     res.contentType = "text/json; charset=UTF-8"
     res
   }
 
-  def makeJsonResponse(value:JsValue):Response = makeJsonResponse(Status.Ok, value)
+  def makeJsonResponse(value: JsValue): Response = makeJsonResponse(Status.Ok, value)
 
 }

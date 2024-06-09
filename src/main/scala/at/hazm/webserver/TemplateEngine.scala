@@ -1,12 +1,13 @@
 package at.hazm.webserver
 
+import at.hazm.using
+import at.hazm.util.Cache
+import org.slf4j.LoggerFactory
+
 import java.io._
 import java.util.ServiceLoader
 import java.util.concurrent.ConcurrentHashMap
 import scala.collection.JavaConverters._
-import at.hazm.using
-import at.hazm.util.Cache
-import org.slf4j.LoggerFactory
 
 /**
   * テンプレートエンジンはリクエストされたファイル拡張子に基づいてその内容を変換する処理を行います。
@@ -17,13 +18,13 @@ trait TemplateEngine {
     * このテンプレートエンジンが変換可能な拡張子のマップ。例えば SVG ファイルから PNG ファイルに変換するテンプレート
     * エンジンの場合 `svg` -> `png` のエントリを持つ。
     */
-  def extensionMap:Map[String, String]
+  def extensionMap: Map[String, String]
 
-  def transform(file:File, in:InputStream, out:OutputStream, param: => Map[String, String]):Dependency
+  def transform(file: File, in: InputStream, out: OutputStream, param: => Map[String, String]): Dependency
 
-  def setRoot(dir:File):Unit = None
+  def setRoot(dir: File): Unit = None
 
-  def setConfig(config:Cache[Config]):Unit = None
+  def setConfig(config: Cache[Config]): Unit = None
 }
 
 object TemplateEngine {
@@ -31,13 +32,13 @@ object TemplateEngine {
 
   private[this] class MetaInfo {
     var verifiedAt = 0L
-    var dependency:Option[Dependency] = None
+    var dependency: Option[Dependency] = None
   }
 
-  class Manager(root:File, interval:Long, config:Cache[Config]) {
+  class Manager(root: File, interval: Long, config: Cache[Config]) {
     private[this] val docroot = Context.docroot(root)
 
-    private[this] val engines = ServiceLoader.load(classOf[TemplateEngine]).asScala.map{ sp =>
+    private[this] val engines = ServiceLoader.load(classOf[TemplateEngine]).asScala.map { sp =>
       sp.setRoot(root)
       sp.setConfig(config)
       logger.debug(s"using template engine: ${sp.getClass.getSimpleName}")
@@ -56,13 +57,13 @@ object TemplateEngine {
       * @param cache     テンプレート適用後の出力先
       * @return キャッシュファイル cache からテンプレート適用後のデータを読み出し可能な場合にその Some(lastModified)
       */
-    def transform(specified:File, cache:File, param:Map[String, String], force:Boolean):Option[Long] = {
+    def transform(specified: File, cache: File, param: Map[String, String], force: Boolean): Option[Long] = {
       val info = meta.computeIfAbsent(cache, { _ => new MetaInfo() })
       val tm = System.currentTimeMillis()
       info.synchronized {
-        if( {
+        if ( {
           // DoS 攻撃回避のため強制再構築要求でもでも interval が経過していなければ構築しない
-          if(info.verifiedAt + interval < tm) {
+          if (info.verifiedAt + interval < tm) {
             info.verifiedAt = tm
             info.dependency.forall(_.isUpdated) || force
           } else false
@@ -71,10 +72,10 @@ object TemplateEngine {
           val start = System.currentTimeMillis()
           rebuild(specified, cache, param).foreach { dependency =>
             val tm = System.currentTimeMillis() - start
-            if(logger.isDebugEnabled) {
+            if (logger.isDebugEnabled) {
               val prefix = specified.getParentFile.toURI
-              val items = dependency.urls.map(_.toURI).map(i => prefix.relativize(i)).map{ i =>
-                if(i.isAbsolute) "/" + docroot.toURI.relativize(i) else i
+              val items = dependency.urls.map(_.toURI).map(i => prefix.relativize(i)).map { i =>
+                if (i.isAbsolute) "/" + docroot.toURI.relativize(i) else i
               }
               logger.debug(f"compiled: [${items.mkString(", ")}%s] -> ${cache.getName} ($tm%,dms)")
             }
@@ -82,7 +83,7 @@ object TemplateEngine {
           }
         }
       }
-      if(cache.exists()) info.dependency.map(_.lastModified) else None
+      if (cache.exists()) info.dependency.map(_.lastModified) else None
     }
 
     /**
@@ -92,12 +93,12 @@ object TemplateEngine {
       * @param output    テンプレート適用後の出力先
       * @return テンプレートの適用に成功した場合、その依存ファイル
       */
-    private[this] def rebuild(specified:File, output:File, param:Map[String, String]):Option[Dependency] = {
+    private[this] def rebuild(specified: File, output: File, param: Map[String, String]): Option[Dependency] = {
       val extension = getExtension(specified).toLowerCase
       engines.view.flatMap { engine =>
         // 要求されたファイルへ変換するためのソースファイルとテンプレートエンジンを選択
         engine.extensionMap.filter { case (_, dist) => dist == extension }.map { case (src, dist) =>
-          new File(specified.getParentFile, if(specified.getName.contains('.')) {
+          new File(specified.getParentFile, if (specified.getName.contains('.')) {
             specified.getName.substring(0, specified.getName.length - dist.length) + src
           } else specified.getName + "." + src)
         }.filter(_.exists()).map((_, engine))
@@ -111,15 +112,15 @@ object TemplateEngine {
             val dependency = using(new BufferedOutputStream(new FileOutputStream(temp))) { out =>
               engine.transform(src, in, out, param)
             }
-            if(!temp.renameTo(output)) {
+            if (!temp.renameTo(output)) {
               output.delete()
-              if(!temp.renameTo(output)) {
+              if (!temp.renameTo(output)) {
                 throw new IOException(s"cannot rename ${temp.getName} to ${output.getName}")
               }
             }
             dependency
           } catch {
-            case ex:Exception =>
+            case ex: Exception =>
               output.delete()
               temp.delete()
               throw ex
@@ -135,8 +136,8 @@ object TemplateEngine {
     * @param file 拡張子を取得するファイル
     * @return `html` のような拡張子
     */
-  def getExtension(file:File):String = {
+  def getExtension(file: File): String = {
     val sep = file.getName.lastIndexOf('.')
-    if(sep < 0) "" else file.getName.substring(sep + 1)
+    if (sep < 0) "" else file.getName.substring(sep + 1)
   }
 }

@@ -1,14 +1,13 @@
 package at.hazm.webserver.templates
 
-import java.io._
-import java.nio.charset.StandardCharsets
-import java.util.ServiceLoader
-
 import at.hazm.webserver.templates.XSLTEngine._
 import at.hazm.webserver.templates.xml.{DocumentProcessor, DocumentWriter, PrettifyProcessor, XMLLoader}
 import at.hazm.webserver.{Dependency, TemplateEngine}
 import org.slf4j.LoggerFactory
 
+import java.io._
+import java.nio.charset.StandardCharsets
+import java.util.ServiceLoader
 import scala.collection.JavaConverters._
 
 /**
