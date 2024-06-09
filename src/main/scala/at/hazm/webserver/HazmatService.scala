@@ -86,6 +86,11 @@ class HazmatService(context: Context) extends TFService[Request, Response] {
 
   private[this] val serverError =
     """<html>
+      |<head>
+      |<meta charset="UTF-8"/>
+      |<meta name="cache-control" content="no-cache"/>
+      |<meta name="pragma" content="no-cache"/>
+      |</head>
       |<body>
       |<h1>500 Internal Server Error</h1>
       |</body>

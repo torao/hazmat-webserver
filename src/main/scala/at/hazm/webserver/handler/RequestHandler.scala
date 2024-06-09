@@ -34,6 +34,9 @@ abstract class RequestHandler(docroot: Path) {
     // XSL 変換用のエラーメッセージ
     val error = defaultErrorMessages.getOrElse(status.code, <html>
       <head>
+        <meta charset="UTF-8"/>
+        <meta name="cache-control" content="no-cache"/>
+        <meta name="pragma" content="no-cache"/>
         <title>
           {s"${status.code} ${status.reason}"}
         </title>
@@ -155,6 +158,9 @@ object RequestHandler {
     val message = elem.childs.find(_.label == "message").get.text
     <html>
       <head>
+        <meta charset="UTF-8"/>
+        <meta name="cache-control" content="no-cache"/>
+        <meta name="pragma" content="no-cache"/>
         <title>
           {s"$code $phrase"}
         </title>
