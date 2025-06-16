@@ -15,8 +15,9 @@ class PrettifyProcessor extends DocumentProcessor {
     * ブロック (コンテナ) 型の要素 (小文字)。
     */
   private[this] val Container = Set(
-    "html", "head", "body", "nav", "article", "footer", "div", "ul", "ol", "dl", "table", "tr", "thead",
-    "tbody", "tfoot", "form", "blockquote", "select").map(_.toLowerCase)
+    "html", "head", "body", "nav", "article", "aside", "audio", "figure", "footer", "div", "ul", "ol", "dl", "hgroup",
+    "main", "picture", "section", "table", "tr", "thead", "tbody", "tfoot", "video", "form", "blockquote", "select"
+  ).map(_.toLowerCase)
 
   /**
     * 内容の前後に存在する空白文字を削除する要素。
