@@ -1,7 +1,7 @@
 rem Windows Home のような Docker Toolbox を使っている場合は Docker Terminal から実行
 @echo off
 setlocal
-set VERSION=1.2.7
+set VERSION=1.2.8
 
 call sbt universal:packageBin
 move /y target\universal\hazmat-webserver-%VERSION%.zip docker\

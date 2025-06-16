@@ -1,5 +1,5 @@
 #!/bin/bash
-VERSION=1.2.7
+VERSION=1.2.8
 sbt universal:packageBin
 mv target/universal/hazmat-webserver-$VERSION.zip docker/
 if [ ! -e docker/hazmat-webserver-$VERSION.zip ]
