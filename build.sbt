@@ -17,7 +17,7 @@ libraryDependencies ++= Seq(
   "com.twitter" %% "finagle-http" % "22.1.0",
   "com.typesafe" % "config" % "1.3.+" exclude("com.google.guava", "guava"),
   "com.typesafe.play" %% "play-json" % "2.9.2",
-  "com.vaadin" % "vaadin-sass-compiler" % "0.9.13",
+  "de.larsgrefer.sass" % "sass-embedded-host"     % "4.3.1", // ホスト実装
   "com.mangofactory" % "typescript4j" % "0.4.0",
   "org.codehaus.janino" % "janino" % "3.1.6", // Dynamic Java Compiler
   "org.apache.xmlgraphics" % "batik-transcoder" % "1.9.1", // transform SVG to PNG
